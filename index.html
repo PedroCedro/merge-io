@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#000000" />
+    <title>Merge.IO</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="gameCanvas" aria-label="Arena do Merge.IO"></canvas>
+
+      <section id="startMenu" class="panel">
+        <h1>Merge.IO</h1>
+        <input id="playerName" maxlength="16" placeholder="Seu nome" value="Jogador" />
+
+        <div class="modeSelector" id="modeSelector">
+          <button class="modeButton active" type="button" data-mode="ai">AI Mode</button>
+          <button class="modeButton" type="button" data-mode="multiplayer">Multiplayer</button>
+        </div>
+
+        <div class="skinGrid" id="skinGrid"></div>
+
+        <button id="playButton" class="primaryButton">Jogar</button>
+        <button id="menuSettingsButton" class="secondaryButton" type="button">Configuracoes</button>
+        <p id="connectionStatus">Conectando...</p>
+        <p id="gameOverText" class="menuMessage"></p>
+      </section>
+
+      <aside id="hud" class="hidden">
+        <div class="metric"><span>Pontos</span><strong id="scoreValue">0</strong></div>
+        <div class="metric"><span>Tamanho</span><strong id="lengthValue">0</strong></div>
+      </aside>
+
+      <aside id="minimapPanel" class="minimapPanel hidden">
+        <canvas id="minimapCanvas" aria-label="Minimapa"></canvas>
+      </aside>
+
+      <aside id="leaderboard" class="leaderboard hidden">
+        <h2>Ranking</h2>
+        <ol id="leaderboardList"></ol>
+      </aside>
+
+      <button id="settingsButton" class="settingsButton" type="button" aria-label="Configuracoes">⚙</button>
+
+      <aside id="settingsPanel" class="settingsPanel hidden">
+        <label>
+          <span>Minimapa</span>
+          <select id="minimapMode">
+            <option value="full">Completo</option>
+            <option value="basic">Basico</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label>
+          <span>Bright Boost</span>
+          <select id="boostGlowMode">
+            <option value="full">Completo</option>
+            <option value="basic">Basico</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label>
+          <span>Visual da cobra</span>
+          <select id="snakeVisualMode">
+            <option value="slither">Slither</option>
+            <option value="performance">Performance</option>
+          </select>
+        </label>
+        <label>
+          <span>Controle</span>
+          <select id="controlMode">
+            <option value="mouse">Mouse</option>
+            <option value="keyboard">Teclado</option>
+          </select>
+        </label>
+        <button id="settingsBackButton" class="primaryButton" type="button">Salvar e voltar</button>
+      </aside>
+
+      <aside id="devControls" class="devControls hidden">
+        <span id="fpsValue" class="fpsValue">FPS --</span>
+        <button id="pauseButton" type="button">Pause</button>
+        <button id="godModeButton" type="button">God Off</button>
+        <button id="autoCircleButton" type="button">Circle Off</button>
+      </aside>
+    </main>
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>
