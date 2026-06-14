@@ -237,6 +237,16 @@ input {
   font-weight: 700;
 }
 
+.exitButton {
+  border-color: rgba(255, 105, 105, 0.28);
+  color: #ffb0b0;
+}
+
+.exitButton:hover {
+  border-color: rgba(255, 105, 105, 0.58);
+  background: rgba(120, 24, 24, 0.24);
+}
+
 #connectionStatus {
   margin: 14px 0 0;
   color: #aaa;

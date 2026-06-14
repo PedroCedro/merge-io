@@ -22,6 +22,7 @@ const {
   playButton,
   fullscreenButton,
   menuSettingsButton,
+  exitButton,
   playerName,
   modeSelector,
   openSkinEditorButton,
@@ -223,6 +224,21 @@ const enterMobileFullscreen = async (): Promise<void> => {
   }
 };
 
+const exitGame = async (): Promise<void> => {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+  } catch {
+    // O navegador pode manter a tela cheia ao bloquear o fechamento da aba.
+  }
+
+  window.close();
+  window.setTimeout(() => {
+    statusText.textContent = 'Feche esta aba para sair';
+  }, 150);
+};
+
 const join = (): void => {
   if (!socket.connected) {
     return;
@@ -399,6 +415,9 @@ settingsButton.addEventListener('click', () => {
   }
 });
 menuSettingsButton.addEventListener('click', openSettings);
+exitButton.addEventListener('click', () => {
+  void exitGame();
+});
 settingsBackButton.addEventListener('click', closeSettings);
 modeSelector.addEventListener('click', (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.modeButton');

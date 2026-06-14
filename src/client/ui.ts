@@ -12,6 +12,7 @@ export const ui = {
   playButton: requiredElement<HTMLButtonElement>('#playButton'),
   fullscreenButton: requiredElement<HTMLButtonElement>('#fullscreenButton'),
   menuSettingsButton: requiredElement<HTMLButtonElement>('#menuSettingsButton'),
+  exitButton: requiredElement<HTMLButtonElement>('#exitButton'),
   playerName: requiredElement<HTMLInputElement>('#playerName'),
   modeSelector: requiredElement<HTMLElement>('#modeSelector'),
   openSkinEditorButton: requiredElement<HTMLButtonElement>('#openSkinEditorButton'),
@@ -57,4 +58,3 @@ export const ui = {
   clearDeathMassButton: requiredElement<HTMLButtonElement>('#clearDeathMassButton'),
   autoCircleButton: requiredElement<HTMLButtonElement>('#autoCircleButton'),
 };
-
