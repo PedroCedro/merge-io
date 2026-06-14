@@ -14,7 +14,6 @@ export class Renderer {
   private snakeVisualMode: SnakeVisualMode = 'slither';
   private foodAnimationMode: FoodAnimationMode = 'static';
   private currentTick = 0;
-  private mobilePerformance = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -24,7 +23,7 @@ export class Renderer {
   resize(): void {
     const width = this.viewportWidth();
     const height = this.viewportHeight();
-    const dpr = this.mobilePerformance ? Math.min(window.devicePixelRatio || 1, 1.25) : window.devicePixelRatio || 1;
+    const dpr = window.devicePixelRatio || 1;
     this.canvas.width = Math.floor(width * dpr);
     this.canvas.height = Math.floor(height * dpr);
     this.canvas.style.width = `${width}px`;
@@ -49,11 +48,6 @@ export class Renderer {
 
   setFoodAnimationMode(mode: FoodAnimationMode): void {
     this.foodAnimationMode = mode;
-  }
-
-  setMobilePerformance(enabled: boolean): void {
-    this.mobilePerformance = enabled;
-    this.resize();
   }
 
   draw(snapshot: WorldSnapshot): void {
@@ -160,11 +154,6 @@ export class Renderer {
   }
 
   private drawDeathFood(foods: Food[]): void {
-    if (this.mobilePerformance) {
-      this.drawMobileDeathFood(foods);
-      return;
-    }
-
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'lighter';
 
@@ -189,27 +178,6 @@ export class Renderer {
     this.ctx.restore();
   }
 
-  private drawMobileDeathFood(foods: Food[]): void {
-    for (const food of foods) {
-      if (food.source !== 'death' || !this.isVisible(food.x, food.y, food.radius * 2)) {
-        continue;
-      }
-
-      this.ctx.fillStyle = food.color;
-      this.ctx.globalAlpha = 0.9;
-      this.ctx.beginPath();
-      this.ctx.arc(
-        food.x - this.camera.x,
-        food.y - this.camera.y,
-        food.radius * 1.35,
-        0,
-        Math.PI * 2,
-      );
-      this.ctx.fill();
-    }
-    this.ctx.globalAlpha = 1;
-  }
-
   private drawSnake(snake: SnakeSnapshot): void {
     const skin = findSkin(snake.skin);
     if (snake.segments.length === 0) {
@@ -230,45 +198,13 @@ export class Renderer {
       this.drawBoostGlow(snake, skin.glow);
     }
 
-    if (this.mobilePerformance) {
-      this.drawMobileBody(snake, skin);
-    } else if (this.snakeVisualMode === 'performance') {
+    if (this.snakeVisualMode === 'performance') {
       this.drawPerformanceBody(snake, skin);
     } else {
       this.drawSlitherBody(snake, skin);
     }
     this.drawHead(snake, skin);
     this.ctx.restore();
-  }
-
-  private drawMobileBody(snake: SnakeSnapshot, skin: Skin): void {
-    const segments = snake.segments;
-    if (segments.length < 2) {
-      return;
-    }
-
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.strokeStyle = skin.body[0];
-    this.ctx.lineWidth = snake.radius * 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(segments[0].x - this.camera.x, segments[0].y - this.camera.y);
-    for (let index = 2; index < segments.length; index += 2) {
-      this.ctx.lineTo(segments[index].x - this.camera.x, segments[index].y - this.camera.y);
-    }
-    const tail = segments.at(-1);
-    if (tail) {
-      this.ctx.lineTo(tail.x - this.camera.x, tail.y - this.camera.y);
-    }
-    this.ctx.stroke();
-
-    if (skin.body.length > 1) {
-      this.ctx.globalAlpha = 0.48;
-      this.ctx.strokeStyle = skin.body[1];
-      this.ctx.lineWidth = Math.max(2, snake.radius * 0.72);
-      this.ctx.stroke();
-      this.ctx.globalAlpha = 1;
-    }
   }
 
   // Desenha o corpo como uma sequencia de discos sobrepostos (sprites com
@@ -509,10 +445,8 @@ export class Renderer {
     this.ctx.translate(markerX, markerY);
     this.ctx.rotate(angle);
     this.ctx.fillStyle = '#ffd84d';
-    if (!this.mobilePerformance) {
-      this.ctx.shadowColor = 'rgba(255, 208, 45, 0.75)';
-      this.ctx.shadowBlur = 10;
-    }
+    this.ctx.shadowColor = 'rgba(255, 208, 45, 0.75)';
+    this.ctx.shadowBlur = 10;
     this.ctx.beginPath();
     this.ctx.moveTo(15, 0);
     this.ctx.lineTo(2, -8);
@@ -534,10 +468,8 @@ export class Renderer {
     this.ctx.fillStyle = '#ffd84d';
     this.ctx.strokeStyle = '#8a5a00';
     this.ctx.lineWidth = Math.max(1.2, size * 0.09);
-    if (!this.mobilePerformance) {
-      this.ctx.shadowColor = 'rgba(255, 208, 45, 0.72)';
-      this.ctx.shadowBlur = size * 0.55;
-    }
+    this.ctx.shadowColor = 'rgba(255, 208, 45, 0.72)';
+    this.ctx.shadowBlur = size * 0.55;
 
     this.ctx.beginPath();
     this.ctx.moveTo(-size, -size * 0.35);

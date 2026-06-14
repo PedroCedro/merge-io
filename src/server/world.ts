@@ -1,7 +1,6 @@
 import {
   SKINS,
   type BotDifficulty,
-  type ClientPerformanceProfile,
   type Food,
   type LeaderboardEntry,
   type MinimapMode,
@@ -158,20 +157,14 @@ export class GameWorld {
     selfId: string | null,
     minimapMode: MinimapMode = 'basic',
     spectatorCenter?: Vector,
-    performanceProfile: ClientPerformanceProfile = 'desktop',
   ): WorldSnapshot {
     const self = selfId ? this.snakes.get(selfId) : null;
     const center = self?.head ?? spectatorCenter ?? { x: WORLD.width / 2, y: WORLD.height / 2 };
     const length = self?.length ?? SNAKE.initialLength;
-    const mobile = performanceProfile === 'mobile';
-    const areaOfInterest = Math.min(
-      mobile ? NETWORK.mobileAreaOfInterestMax : NETWORK.areaOfInterestMax,
-      (mobile ? NETWORK.mobileAreaOfInterest : NETWORK.areaOfInterest) + length * (mobile ? 6 : 10),
-    );
+    const areaOfInterest = Math.min(NETWORK.areaOfInterestMax, NETWORK.areaOfInterest + length * 10);
     const foodLimit = Math.min(
-      mobile ? NETWORK.mobileFoodLimitPerClientMax : NETWORK.foodLimitPerClientMax,
-      (mobile ? NETWORK.mobileFoodLimitPerClient : NETWORK.foodLimitPerClient)
-        + length * (mobile ? NETWORK.mobileFoodLimitPerSegment : NETWORK.foodLimitPerSegment),
+      NETWORK.foodLimitPerClientMax,
+      NETWORK.foodLimitPerClient + length * NETWORK.foodLimitPerSegment,
     );
     const areaSq = areaOfInterest * areaOfInterest;
 
