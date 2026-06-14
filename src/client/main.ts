@@ -4,15 +4,32 @@ import { InputController } from './input';
 import { Minimap } from './minimap';
 import { GameSocket } from './network';
 import { Renderer } from './renderer';
-import { loadSettings, saveSettings, type BoostGlowMode, type SnakeVisualMode } from './settings';
+import {
+  loadSettings,
+  saveSettings,
+  type BoostGlowMode,
+  type FoodAnimationMode,
+  type MobileControlMode,
+  type SnakeVisualMode,
+} from './settings';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
 const startMenu = document.querySelector<HTMLElement>('#startMenu');
 const playButton = document.querySelector<HTMLButtonElement>('#playButton');
+const fullscreenButton = document.querySelector<HTMLButtonElement>('#fullscreenButton');
 const menuSettingsButton = document.querySelector<HTMLButtonElement>('#menuSettingsButton');
 const playerName = document.querySelector<HTMLInputElement>('#playerName');
 const modeSelector = document.querySelector<HTMLElement>('#modeSelector');
-const skinGrid = document.querySelector<HTMLElement>('#skinGrid');
+const openSkinEditorButton = document.querySelector<HTMLButtonElement>('#openSkinEditorButton');
+const selectedSkinSwatch = document.querySelector<HTMLElement>('#selectedSkinSwatch');
+const selectedSkinName = document.querySelector<HTMLElement>('#selectedSkinName');
+const skinEditorPanel = document.querySelector<HTMLElement>('#skinEditorPanel');
+const skinPreview = document.querySelector<HTMLElement>('#skinPreview');
+const skinPreviewName = document.querySelector<HTMLElement>('#skinPreviewName');
+const colorSkinGrid = document.querySelector<HTMLElement>('#colorSkinGrid');
+const countrySkinGrid = document.querySelector<HTMLElement>('#countrySkinGrid');
+const confirmSkinButton = document.querySelector<HTMLButtonElement>('#confirmSkinButton');
+const cancelSkinButton = document.querySelector<HTMLButtonElement>('#cancelSkinButton');
 const statusText = document.querySelector<HTMLElement>('#connectionStatus');
 const hud = document.querySelector<HTMLElement>('#hud');
 const minimapPanel = document.querySelector<HTMLElement>('#minimapPanel');
@@ -21,28 +38,49 @@ const leaderboard = document.querySelector<HTMLElement>('#leaderboard');
 const leaderboardList = document.querySelector<HTMLOListElement>('#leaderboardList');
 const scoreValue = document.querySelector<HTMLElement>('#scoreValue');
 const lengthValue = document.querySelector<HTMLElement>('#lengthValue');
-const gameOverText = document.querySelector<HTMLElement>('#gameOverText');
+const gameOverPanel = document.querySelector<HTMLElement>('#gameOverPanel');
+const gameOverScore = document.querySelector<HTMLElement>('#gameOverScore');
+const playAgainButton = document.querySelector<HTMLButtonElement>('#playAgainButton');
+const backToMenuButton = document.querySelector<HTMLButtonElement>('#backToMenuButton');
 const settingsButton = document.querySelector<HTMLButtonElement>('#settingsButton');
 const settingsPanel = document.querySelector<HTMLElement>('#settingsPanel');
 const settingsBackButton = document.querySelector<HTMLButtonElement>('#settingsBackButton');
 const minimapMode = document.querySelector<HTMLSelectElement>('#minimapMode');
 const boostGlowMode = document.querySelector<HTMLSelectElement>('#boostGlowMode');
 const snakeVisualMode = document.querySelector<HTMLSelectElement>('#snakeVisualMode');
+const foodAnimationMode = document.querySelector<HTMLSelectElement>('#foodAnimationMode');
 const controlMode = document.querySelector<HTMLSelectElement>('#controlMode');
+const mobileControlMode = document.querySelector<HTMLSelectElement>('#mobileControlMode');
+const mobileControls = document.querySelector<HTMLElement>('#mobileControls');
+const mobileJoystick = document.querySelector<HTMLElement>('#mobileJoystick');
+const mobileJoystickKnob = document.querySelector<HTMLElement>('#mobileJoystickKnob');
+const mobileBoostButton = document.querySelector<HTMLButtonElement>('#mobileBoostButton');
 const devControls = document.querySelector<HTMLElement>('#devControls');
 const fpsValue = document.querySelector<HTMLElement>('#fpsValue');
 const pauseButton = document.querySelector<HTMLButtonElement>('#pauseButton');
 const godModeButton = document.querySelector<HTMLButtonElement>('#godModeButton');
+const infiniteBoostButton = document.querySelector<HTMLButtonElement>('#infiniteBoostButton');
+const clearDeathMassButton = document.querySelector<HTMLButtonElement>('#clearDeathMassButton');
 const autoCircleButton = document.querySelector<HTMLButtonElement>('#autoCircleButton');
 
 if (
   !canvas ||
   !startMenu ||
   !playButton ||
+  !fullscreenButton ||
   !menuSettingsButton ||
   !playerName ||
   !modeSelector ||
-  !skinGrid ||
+  !openSkinEditorButton ||
+  !selectedSkinSwatch ||
+  !selectedSkinName ||
+  !skinEditorPanel ||
+  !skinPreview ||
+  !skinPreviewName ||
+  !colorSkinGrid ||
+  !countrySkinGrid ||
+  !confirmSkinButton ||
+  !cancelSkinButton ||
   !statusText ||
   !hud ||
   !minimapPanel ||
@@ -51,18 +89,29 @@ if (
   !leaderboardList ||
   !scoreValue ||
   !lengthValue ||
-  !gameOverText ||
+  !gameOverPanel ||
+  !gameOverScore ||
+  !playAgainButton ||
+  !backToMenuButton ||
   !settingsButton ||
   !settingsPanel ||
   !settingsBackButton ||
   !minimapMode ||
   !boostGlowMode ||
   !snakeVisualMode ||
+  !foodAnimationMode ||
   !controlMode ||
+  !mobileControlMode ||
+  !mobileControls ||
+  !mobileJoystick ||
+  !mobileJoystickKnob ||
+  !mobileBoostButton ||
   !devControls ||
   !fpsValue ||
   !pauseButton ||
   !godModeButton ||
+  !infiniteBoostButton ||
+  !clearDeathMassButton ||
   !autoCircleButton
 ) {
   throw new Error('Merge.IO UI incompleta');
@@ -74,11 +123,12 @@ if (!context) {
 }
 
 let selectedSkin: SkinId = SKINS[0].id;
+let editingSkin: SkinId = selectedSkin;
 let selectedGameMode: GameMode = 'ai';
 let paused = false;
 let godMode = false;
+let infiniteBoost = false;
 let autoCircle = false;
-let autoCircleAngle = 0;
 let fpsFrames = 0;
 let fpsLastUpdate = performance.now();
 let snapshot: WorldSnapshot | null = null;
@@ -94,19 +144,52 @@ const minimap = new Minimap(minimapCanvas);
 let visualSettings = loadSettings();
 
 const renderSkins = (): void => {
-  skinGrid.innerHTML = '';
+  colorSkinGrid.innerHTML = '';
+  countrySkinGrid.innerHTML = '';
+  const previewSkin = SKINS.find((skin) => skin.id === editingSkin) ?? SKINS[0];
+
   for (const skin of SKINS) {
     const button = document.createElement('button');
-    button.className = `skinButton${skin.id === selectedSkin ? ' active' : ''}`;
+    button.className = `skinButton${skin.id === editingSkin ? ' active' : ''}`;
     button.type = 'button';
     button.title = skin.name;
     button.innerHTML = `<span class="skinSwatch" style="background: linear-gradient(90deg, ${skin.body.join(', ')})"></span>${skin.name}`;
     button.addEventListener('click', () => {
-      selectedSkin = skin.id;
+      editingSkin = skin.id;
       renderSkins();
     });
-    skinGrid.appendChild(button);
+    const grid = skin.category === 'country' ? countrySkinGrid : colorSkinGrid;
+    grid.appendChild(button);
   }
+
+  skinPreview.innerHTML = '';
+  for (let index = 0; index < 12; index += 1) {
+    const segment = document.createElement('span');
+    segment.className = 'skinPreviewSegment';
+    segment.style.background = index === 11
+      ? previewSkin.head
+      : previewSkin.body[index % previewSkin.body.length];
+    skinPreview.appendChild(segment);
+  }
+  skinPreviewName.textContent = previewSkin.name;
+};
+
+const syncSelectedSkin = (): void => {
+  const skin = SKINS.find((entry) => entry.id === selectedSkin) ?? SKINS[0];
+  selectedSkinSwatch.style.background = `linear-gradient(90deg, ${skin.body.join(', ')})`;
+  selectedSkinName.textContent = skin.name;
+};
+
+const openSkinEditor = (): void => {
+  editingSkin = selectedSkin;
+  renderSkins();
+  startMenu.classList.add('hidden');
+  skinEditorPanel.classList.remove('hidden');
+};
+
+const closeSkinEditor = (): void => {
+  skinEditorPanel.classList.add('hidden');
+  startMenu.classList.remove('hidden');
 };
 
 const renderGameMode = (): void => {
@@ -120,9 +203,13 @@ const syncSettingsUi = (): void => {
   minimapMode.value = visualSettings.minimap;
   boostGlowMode.value = visualSettings.boostGlow;
   snakeVisualMode.value = visualSettings.snakeVisual;
+  foodAnimationMode.value = visualSettings.foodAnimation;
   controlMode.value = visualSettings.controlMode;
+  mobileControlMode.value = visualSettings.mobileControlMode;
   renderer.setBoostGlowMode(visualSettings.boostGlow);
   renderer.setSnakeVisualMode(visualSettings.snakeVisual);
+  renderer.setFoodAnimationMode(visualSettings.foodAnimation);
+  mobileControls.classList.toggle('joystickMode', visualSettings.mobileControlMode === 'joystick');
   minimapPanel.classList.toggle('disabled', visualSettings.minimap === 'off');
   if (visualSettings.minimap === 'off') {
     minimap.clear();
@@ -133,6 +220,7 @@ const openSettings = (): void => {
   if (!playing) {
     startMenu.classList.add('hidden');
   }
+  mobileControls.classList.add('hidden');
   settingsPanel.classList.remove('hidden');
 };
 
@@ -140,6 +228,39 @@ const closeSettings = (): void => {
   settingsPanel.classList.add('hidden');
   if (!playing) {
     startMenu.classList.remove('hidden');
+  } else {
+    mobileControls.classList.remove('hidden');
+  }
+};
+
+const enterMobileFullscreen = async (): Promise<void> => {
+  const root = document.documentElement as HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+  };
+
+  try {
+    if (!document.fullscreenElement) {
+      if (root.requestFullscreen) {
+        await root.requestFullscreen({ navigationUI: 'hide' });
+      } else if (root.webkitRequestFullscreen) {
+        await root.webkitRequestFullscreen();
+      } else {
+        statusText.textContent = 'Use Adicionar a tela inicial para fullscreen';
+        return;
+      }
+    }
+  } catch {
+    statusText.textContent = 'Fullscreen bloqueado pelo navegador';
+    return;
+  }
+
+  try {
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (mode: 'landscape') => Promise<void>;
+    };
+    await orientation.lock?.('landscape');
+  } catch {
+    // Alguns navegadores permitem apenas a preferencia landscape do manifesto.
   }
 };
 
@@ -148,6 +269,7 @@ const join = (): void => {
     return;
   }
 
+  void enterMobileFullscreen();
   socket.send({
     type: 'join',
     name: playerName.value,
@@ -156,11 +278,12 @@ const join = (): void => {
     minimapMode: visualSettings.minimap,
   });
   startMenu.classList.add('hidden');
-  gameOverText.textContent = '';
+  gameOverPanel.classList.add('hidden');
   hud.classList.remove('hidden');
   minimapPanel.classList.remove('hidden');
   leaderboard.classList.remove('hidden');
   devControls.classList.remove('hidden');
+  mobileControls.classList.remove('hidden');
   settingsPanel.classList.add('hidden');
   playing = true;
 };
@@ -200,10 +323,30 @@ const getControlTarget = (): { x: number; y: number } => {
 
   const head = self.segments[0];
   if (autoCircle) {
-    autoCircleAngle += 0.045;
+    // Aim almost directly behind the head. This keeps the turn direction
+    // stable while asking the server's turn lerp for its tightest curve.
+    const tightTurnAngle = self.angle + Math.PI * 0.96;
     return {
-      x: head.x + Math.cos(autoCircleAngle) * 340,
-      y: head.y + Math.sin(autoCircleAngle) * 340,
+      x: head.x + Math.cos(tightTurnAngle) * 1000,
+      y: head.y + Math.sin(tightTurnAngle) * 1000,
+    };
+  }
+
+  const mobileJoystickActive = window.matchMedia('(pointer: coarse)').matches
+    && visualSettings.mobileControlMode === 'joystick';
+
+  if (mobileJoystickActive) {
+    const direction = input.virtualDirection;
+    if (Math.hypot(direction.x, direction.y) > 0) {
+      return {
+        x: head.x + direction.x * 1000,
+        y: head.y + direction.y * 1000,
+      };
+    }
+
+    return {
+      x: head.x + Math.cos(self.angle) * 1000,
+      y: head.y + Math.sin(self.angle) * 1000,
     };
   }
 
@@ -222,8 +365,10 @@ const getControlTarget = (): { x: number; y: number } => {
     };
   }
 
-  const dx = input.target.x - window.innerWidth / 2;
-  const dy = input.target.y - window.innerHeight / 2;
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const dx = input.target.x - viewportWidth / 2;
+  const dy = input.target.y - viewportHeight / 2;
   const distance = Math.hypot(dx, dy);
 
   if (distance < 22) {
@@ -293,6 +438,9 @@ socket.onMessage((message) => {
     previousSnapshot = null;
     snapshot = message.snapshot;
     snapshotReceivedAt = performance.now();
+    if (infiniteBoost) {
+      socket.send({ type: 'dev', infiniteBoost: true });
+    }
   }
 
   if (message.type === 'state') {
@@ -303,12 +451,12 @@ socket.onMessage((message) => {
 
   if (message.type === 'dead') {
     playing = false;
-    gameOverText.textContent = `${message.reason}. Pontos: ${message.score}`;
-    startMenu.classList.remove('hidden');
+    gameOverScore.textContent = message.score.toString();
+    gameOverPanel.classList.remove('hidden');
     hud.classList.add('hidden');
     minimapPanel.classList.add('hidden');
-    leaderboard.classList.add('hidden');
     devControls.classList.add('hidden');
+    mobileControls.classList.add('hidden');
     selfId = null;
   }
 
@@ -316,6 +464,22 @@ socket.onMessage((message) => {
 });
 
 playButton.addEventListener('click', join);
+fullscreenButton.addEventListener('click', () => {
+  void enterMobileFullscreen();
+});
+openSkinEditorButton.addEventListener('click', openSkinEditor);
+confirmSkinButton.addEventListener('click', () => {
+  selectedSkin = editingSkin;
+  syncSelectedSkin();
+  closeSkinEditor();
+});
+cancelSkinButton.addEventListener('click', closeSkinEditor);
+playAgainButton.addEventListener('click', join);
+backToMenuButton.addEventListener('click', () => {
+  gameOverPanel.classList.add('hidden');
+  leaderboard.classList.add('hidden');
+  startMenu.classList.remove('hidden');
+});
 settingsButton.addEventListener('click', () => {
   if (settingsPanel.classList.contains('hidden')) {
     openSettings();
@@ -351,11 +515,76 @@ snakeVisualMode.addEventListener('change', () => {
   saveSettings(visualSettings);
   syncSettingsUi();
 });
+foodAnimationMode.addEventListener('change', () => {
+  visualSettings = { ...visualSettings, foodAnimation: foodAnimationMode.value as FoodAnimationMode };
+  saveSettings(visualSettings);
+  syncSettingsUi();
+});
 controlMode.addEventListener('change', () => {
   visualSettings = { ...visualSettings, controlMode: controlMode.value as ControlMode };
   saveSettings(visualSettings);
   syncSettingsUi();
 });
+mobileControlMode.addEventListener('change', () => {
+  visualSettings = {
+    ...visualSettings,
+    mobileControlMode: mobileControlMode.value as MobileControlMode,
+  };
+  saveSettings(visualSettings);
+  syncSettingsUi();
+});
+
+let joystickPointerId: number | null = null;
+const updateJoystick = (clientX: number, clientY: number): void => {
+  const rect = mobileJoystick.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const maxDistance = rect.width * 0.3;
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.hypot(dx, dy);
+  const scale = distance > maxDistance ? maxDistance / distance : 1;
+  const knobX = dx * scale;
+  const knobY = dy * scale;
+  mobileJoystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+  input.setVirtualDirection(
+    distance > 4 ? { x: dx / distance, y: dy / distance } : { x: 0, y: 0 },
+  );
+};
+
+const releaseJoystick = (): void => {
+  joystickPointerId = null;
+  mobileJoystickKnob.style.transform = 'translate(0, 0)';
+  input.setVirtualDirection({ x: 0, y: 0 });
+};
+
+mobileJoystick.addEventListener('pointerdown', (event) => {
+  joystickPointerId = event.pointerId;
+  mobileJoystick.setPointerCapture(event.pointerId);
+  updateJoystick(event.clientX, event.clientY);
+  event.preventDefault();
+});
+mobileJoystick.addEventListener('pointermove', (event) => {
+  if (event.pointerId === joystickPointerId) {
+    updateJoystick(event.clientX, event.clientY);
+  }
+});
+mobileJoystick.addEventListener('pointerup', releaseJoystick);
+mobileJoystick.addEventListener('pointercancel', releaseJoystick);
+
+const startMobileBoost = (event: PointerEvent): void => {
+  input.setBoosting(true);
+  mobileBoostButton.classList.add('active');
+  mobileBoostButton.setPointerCapture(event.pointerId);
+  event.preventDefault();
+};
+const stopMobileBoost = (): void => {
+  input.setBoosting(false);
+  mobileBoostButton.classList.remove('active');
+};
+mobileBoostButton.addEventListener('pointerdown', startMobileBoost);
+mobileBoostButton.addEventListener('pointerup', stopMobileBoost);
+mobileBoostButton.addEventListener('pointercancel', stopMobileBoost);
 pauseButton.addEventListener('click', () => {
   paused = !paused;
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
@@ -366,12 +595,22 @@ godModeButton.addEventListener('click', () => {
   godModeButton.textContent = godMode ? 'God On' : 'God Off';
   socket.send({ type: 'dev', godMode });
 });
+infiniteBoostButton.addEventListener('click', () => {
+  infiniteBoost = !infiniteBoost;
+  infiniteBoostButton.textContent = infiniteBoost ? 'Boost On' : 'Boost Off';
+  socket.send({ type: 'dev', infiniteBoost });
+});
+clearDeathMassButton.addEventListener('click', () => {
+  socket.send({ type: 'dev', clearDeathMass: true });
+});
 autoCircleButton.addEventListener('click', () => {
   autoCircle = !autoCircle;
   autoCircleButton.textContent = autoCircle ? 'Circle On' : 'Circle Off';
 });
 window.addEventListener('resize', () => renderer.resize());
 window.addEventListener('resize', () => minimap.resize());
+window.visualViewport?.addEventListener('resize', () => renderer.resize());
+screen.orientation?.addEventListener('change', () => renderer.resize());
 
 const loop = (): void => {
   fpsFrames += 1;
@@ -392,7 +631,12 @@ const loop = (): void => {
     minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);
   } else {
     context.fillStyle = '#000';
-    context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    context.fillRect(
+      0,
+      0,
+      window.visualViewport?.width ?? window.innerWidth,
+      window.visualViewport?.height ?? window.innerHeight,
+    );
   }
 
   if (playing) {
@@ -407,8 +651,17 @@ const loop = (): void => {
 };
 
 renderSkins();
+syncSelectedSkin();
 renderGameMode();
 syncSettingsUi();
 renderer.resize();
 socket.connect();
 loop();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // A rede local via HTTP permite jogar, mas alguns navegadores exigem HTTPS para instalar o PWA.
+    });
+  });
+}

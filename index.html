@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Merge.IO" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/merge-io-192.png" />
+    <link rel="apple-touch-icon" href="/icons/merge-io-192.png" />
     <title>Merge.IO</title>
   </head>
   <body>
@@ -19,12 +26,44 @@
           <button class="modeButton" type="button" data-mode="multiplayer">Multiplayer</button>
         </div>
 
-        <div class="skinGrid" id="skinGrid"></div>
+        <button id="openSkinEditorButton" class="skinPickerButton" type="button">
+          <span id="selectedSkinSwatch" class="skinSwatch"></span>
+          <span>Editar skin</span>
+          <strong id="selectedSkinName">Neon</strong>
+        </button>
 
         <button id="playButton" class="primaryButton">Jogar</button>
+        <button id="fullscreenButton" class="secondaryButton" type="button">Tela cheia</button>
         <button id="menuSettingsButton" class="secondaryButton" type="button">Configuracoes</button>
         <p id="connectionStatus">Conectando...</p>
-        <p id="gameOverText" class="menuMessage"></p>
+      </section>
+
+      <section id="skinEditorPanel" class="panel skinEditorPanel hidden">
+        <h2>Escolha sua skin</h2>
+        <div id="skinPreview" class="skinPreview" aria-label="Pre-visualizacao da skin"></div>
+        <strong id="skinPreviewName" class="skinPreviewName">Neon</strong>
+
+        <div class="skinCatalog">
+          <section>
+            <h3>Cores</h3>
+            <div class="skinGrid" id="colorSkinGrid"></div>
+          </section>
+          <section>
+            <h3>Paises</h3>
+            <div class="skinGrid" id="countrySkinGrid"></div>
+          </section>
+        </div>
+
+        <button id="confirmSkinButton" class="primaryButton" type="button">Usar esta skin</button>
+        <button id="cancelSkinButton" class="secondaryButton" type="button">Cancelar</button>
+      </section>
+
+      <section id="gameOverPanel" class="panel gameOverPanel hidden">
+        <h2>Fim de jogo</h2>
+        <p class="gameOverLabel">Pontuacao obtida</p>
+        <strong id="gameOverScore" class="gameOverScore">0</strong>
+        <button id="playAgainButton" class="primaryButton" type="button">Jogar novamente</button>
+        <button id="backToMenuButton" class="secondaryButton" type="button">Voltar ao menu</button>
       </section>
 
       <aside id="hud" class="hidden">
@@ -68,19 +107,42 @@
           </select>
         </label>
         <label>
+          <span>Animação da comida</span>
+          <select id="foodAnimationMode">
+            <option value="static">Estática</option>
+            <option value="pulse">Pulsante</option>
+          </select>
+        </label>
+        <label>
           <span>Controle</span>
           <select id="controlMode">
             <option value="mouse">Mouse</option>
             <option value="keyboard">Teclado</option>
           </select>
         </label>
+        <label>
+          <span>Controle mobile</span>
+          <select id="mobileControlMode">
+            <option value="touch">Touch</option>
+            <option value="joystick">Joystick</option>
+          </select>
+        </label>
         <button id="settingsBackButton" class="primaryButton" type="button">Salvar e voltar</button>
+      </aside>
+
+      <aside id="mobileControls" class="mobileControls hidden" data-mobile-control>
+        <div id="mobileJoystick" class="mobileJoystick" data-mobile-control>
+          <span id="mobileJoystickKnob" class="mobileJoystickKnob"></span>
+        </div>
+        <button id="mobileBoostButton" class="mobileBoostButton" type="button" data-mobile-control>BOOST</button>
       </aside>
 
       <aside id="devControls" class="devControls hidden">
         <span id="fpsValue" class="fpsValue">FPS --</span>
         <button id="pauseButton" type="button">Pause</button>
         <button id="godModeButton" type="button">God Off</button>
+        <button id="infiniteBoostButton" type="button">Boost Off</button>
+        <button id="clearDeathMassButton" type="button">Limpar massas</button>
         <button id="autoCircleButton" type="button">Circle Off</button>
       </aside>
     </main>

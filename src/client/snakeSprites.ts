@@ -9,6 +9,7 @@
 type Sprite = HTMLCanvasElement;
 
 const cache = new Map<string, Sprite>();
+const deathFoodCache = new Map<string, Sprite>();
 let colorParserContext: CanvasRenderingContext2D | null = null;
 
 const clampByte = (value: number): number => Math.max(0, Math.min(255, Math.round(value)));
@@ -104,5 +105,43 @@ export const getSegmentSprite = (color: string, radius: number): Sprite => {
   ctx.fill();
 
   cache.set(key, canvas);
+  return canvas;
+};
+
+export const getDeathFoodSprite = (color: string, radius: number): Sprite => {
+  const r = Math.max(2, Math.round(radius));
+  const key = `${color}:${r}`;
+  const cached = deathFoodCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const outerRadius = r * 1.65;
+  const size = Math.ceil(outerRadius * 2) + 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    deathFoodCache.set(key, canvas);
+    return canvas;
+  }
+
+  const center = size / 2;
+  const colorRgb = parseCssColor(color);
+  const rgb = `${colorRgb[0]}, ${colorRgb[1]}, ${colorRgb[2]}`;
+  const gradient = ctx.createRadialGradient(center, center, 0, center, center, outerRadius);
+  gradient.addColorStop(0, '#fff');
+  gradient.addColorStop(0.18, 'rgba(255, 255, 255, 0.95)');
+  gradient.addColorStop(0.42, `rgba(${rgb}, 0.88)`);
+  gradient.addColorStop(0.72, `rgba(${rgb}, 0.42)`);
+  gradient.addColorStop(1, `rgba(${rgb}, 0)`);
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(center, center, outerRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  deathFoodCache.set(key, canvas);
   return canvas;
 };

@@ -3,6 +3,7 @@ import type { Vector } from '../shared/types';
 export class InputController {
   target: Vector = { x: 0, y: 0 };
   keyboardDirection: Vector = { x: 0, y: 0 };
+  virtualDirection: Vector = { x: 0, y: 0 };
   boosting = false;
   private readonly pressed = new Set<string>();
 
@@ -12,8 +13,25 @@ export class InputController {
     });
 
     window.addEventListener(
+      'touchstart',
+      (event) => {
+        if ((event.target as HTMLElement).closest('[data-mobile-control]')) {
+          return;
+        }
+        const touch = event.touches[0];
+        if (touch) {
+          this.target = { x: touch.clientX, y: touch.clientY };
+        }
+      },
+      { passive: true },
+    );
+
+    window.addEventListener(
       'touchmove',
       (event) => {
+        if ((event.target as HTMLElement).closest('[data-mobile-control]')) {
+          return;
+        }
         const touch = event.touches[0];
         if (touch) {
           this.target = { x: touch.clientX, y: touch.clientY };
@@ -52,6 +70,14 @@ export class InputController {
       x: this.canvas.width / 2,
       y: this.canvas.height / 2,
     };
+  }
+
+  setVirtualDirection(direction: Vector): void {
+    this.virtualDirection = direction;
+  }
+
+  setBoosting(boosting: boolean): void {
+    this.boosting = boosting;
   }
 
   private isDirectionKey(code: string): boolean {

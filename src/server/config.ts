@@ -8,7 +8,7 @@ export const WORLD = {
   initialFood: 15000,
   maxFood: 15000,
   replenishFood: false,
-  deathFoodStep: 1,
+  deathFoodValue: 5,
 };
 
 export const BOTS = {
@@ -23,14 +23,21 @@ export const BOTS = {
 export const SNAKE = {
   initialLength: 3,
   massPerSegment: 4,
+  visualMassGrowthPerSecond: 12,
+  visualMassShrinkPerSecond: 24,
   boostMassCost: 1,
   segmentGap: 12,
   baseRadius: 7,
+  radiusGrowth: 0.6,
+  maxRadius: 32,
   baseSpeed: 150,
-  boostSpeed: 245,
+  maxBaseSpeed: 205,
+  speedMassScale: 0.85,
+  boostSpeedMultiplier: 1.63,
   turnLerp: 0.11,
   foodPickupRadius: 4,
   maxFoodPickupsPerTick: 1,
+  maxDeathFoodPickupsPerTick: 3,
   collisionPadding: 5,
 };
 
@@ -38,7 +45,8 @@ export const NETWORK = {
   areaOfInterest: 1800,
   areaOfInterestMax: 3600,
   foodLimitPerClient: 520,
-  foodLimitPerClientMax: 3800,
+  foodLimitPerClientMax: 1800,
+  foodLimitPerSegment: 3,
   leaderboardSize: 10,
   minimapSegmentStep: 5,
 };

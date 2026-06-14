@@ -1,6 +1,6 @@
 import { findSkin, type Food, type Skin, type SnakeSnapshot, type Vector, type WorldSnapshot } from '../shared/types';
-import type { BoostGlowMode, SnakeVisualMode } from './settings';
-import { getSegmentSprite } from './snakeSprites';
+import type { BoostGlowMode, FoodAnimationMode, SnakeVisualMode } from './settings';
+import { getDeathFoodSprite, getSegmentSprite } from './snakeSprites';
 
 type Camera = {
   x: number;
@@ -12,6 +12,7 @@ export class Renderer {
   private camera: Camera = { x: 0, y: 0, zoom: 1 };
   private boostGlowMode: BoostGlowMode = 'basic';
   private snakeVisualMode: SnakeVisualMode = 'slither';
+  private foodAnimationMode: FoodAnimationMode = 'static';
   private currentTick = 0;
 
   constructor(
@@ -20,11 +21,13 @@ export class Renderer {
   ) {}
 
   resize(): void {
+    const width = this.viewportWidth();
+    const height = this.viewportHeight();
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = Math.floor(window.innerWidth * dpr);
-    this.canvas.height = Math.floor(window.innerHeight * dpr);
-    this.canvas.style.width = `${window.innerWidth}px`;
-    this.canvas.style.height = `${window.innerHeight}px`;
+    this.canvas.width = Math.floor(width * dpr);
+    this.canvas.height = Math.floor(height * dpr);
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
@@ -43,18 +46,23 @@ export class Renderer {
     this.snakeVisualMode = mode;
   }
 
+  setFoodAnimationMode(mode: FoodAnimationMode): void {
+    this.foodAnimationMode = mode;
+  }
+
   draw(snapshot: WorldSnapshot): void {
     this.currentTick = snapshot.tick;
     const self = snapshot.snakes.find((snake) => snake.id === snapshot.selfId);
     this.updateCamera(self);
 
     this.ctx.fillStyle = '#000';
-    this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    this.ctx.fillRect(0, 0, this.viewportWidth(), this.viewportHeight());
 
     this.ctx.save();
     this.ctx.scale(this.camera.zoom, this.camera.zoom);
     this.drawWorld(snapshot);
-    snapshot.foods.forEach((food) => this.drawFood(food));
+    this.drawFoods(snapshot.foods);
+    this.drawDeathFood(snapshot.foods);
     snapshot.snakes
       .filter((snake) => snake.id !== snapshot.selfId)
       .forEach((snake) => this.drawSnake(snake));
@@ -73,15 +81,15 @@ export class Renderer {
     const head = self.segments[0];
     const targetZoom = Math.max(0.48, Math.min(1.35, 1.45 - self.segments.length / 260));
     this.camera.zoom += (targetZoom - this.camera.zoom) * 0.08;
-    this.camera.x += (head.x - window.innerWidth / (2 * this.camera.zoom) - this.camera.x) * 0.16;
-    this.camera.y += (head.y - window.innerHeight / (2 * this.camera.zoom) - this.camera.y) * 0.16;
+    this.camera.x += (head.x - this.viewportWidth() / (2 * this.camera.zoom) - this.camera.x) * 0.16;
+    this.camera.y += (head.y - this.viewportHeight() / (2 * this.camera.zoom) - this.camera.y) * 0.16;
   }
 
   private drawWorld(snapshot: WorldSnapshot): void {
     const left = -this.camera.x;
     const top = -this.camera.y;
-    const viewW = window.innerWidth / this.camera.zoom;
-    const viewH = window.innerHeight / this.camera.zoom;
+    const viewW = this.viewportWidth() / this.camera.zoom;
+    const viewH = this.viewportHeight() / this.camera.zoom;
 
     this.ctx.fillStyle = '#3a2618';
     this.ctx.fillRect(0, 0, viewW, viewH);
@@ -115,31 +123,69 @@ export class Renderer {
     this.ctx.restore();
   }
 
-  private drawFood(food: Food): void {
-    const pulse = 1 + Math.sin(Date.now() * 0.006 + food.x) * 0.16;
-    const ageTicks = Math.max(0, this.currentTick - food.spawnTick);
-    const deathEnergy = food.source === 'death' ? Math.max(0.38, 1 - ageTicks / 900) : 0;
-    const radius = food.radius * pulse * (1 + deathEnergy * 0.65);
-    this.ctx.beginPath();
-    this.ctx.fillStyle = deathEnergy > 0 ? '#fff' : food.color;
-    this.ctx.shadowColor = food.color;
-    this.ctx.shadowBlur = 7 + food.radius * 1.8 + deathEnergy * 28;
-    this.ctx.arc(food.x - this.camera.x, food.y - this.camera.y, radius, 0, Math.PI * 2);
-    this.ctx.fill();
-    if (deathEnergy > 0) {
-      this.ctx.globalAlpha = deathEnergy * 0.72;
-      this.ctx.fillStyle = food.color;
-      this.ctx.beginPath();
-      this.ctx.arc(food.x - this.camera.x, food.y - this.camera.y, radius * 0.72, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.globalAlpha = 1;
+  private drawFoods(foods: Food[]): void {
+    const foodsByColor = new Map<string, Food[]>();
+    for (const food of foods) {
+      if (food.source === 'death' || !this.isVisible(food.x, food.y, food.radius + 2)) {
+        continue;
+      }
+      const group = foodsByColor.get(food.color);
+      if (group) {
+        group.push(food);
+      } else {
+        foodsByColor.set(food.color, [food]);
+      }
     }
-    this.ctx.shadowBlur = 0;
+
+    const now = Date.now();
+    for (const [color, group] of foodsByColor) {
+      this.ctx.beginPath();
+      this.ctx.fillStyle = color;
+      for (const food of group) {
+        const pulse = this.foodAnimationMode === 'pulse'
+          ? 1 + Math.sin(now * 0.006 + food.x) * 0.16
+          : 1;
+        this.ctx.moveTo(food.x - this.camera.x + food.radius * pulse, food.y - this.camera.y);
+        this.ctx.arc(food.x - this.camera.x, food.y - this.camera.y, food.radius * pulse, 0, Math.PI * 2);
+      }
+      this.ctx.fill();
+    }
+  }
+
+  private drawDeathFood(foods: Food[]): void {
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'lighter';
+
+    for (const food of foods) {
+      if (food.source !== 'death') continue;
+
+      const x = food.x - this.camera.x;
+      const y = food.y - this.camera.y;
+      const ageTicks = Math.max(0, this.currentTick - food.spawnTick);
+      const appear = Math.min(1, ageTicks / 7);
+      const radius = food.radius * 1.9;
+      if (!this.isVisible(food.x, food.y, radius * 1.65)) {
+        continue;
+      }
+
+      const sprite = getDeathFoodSprite(food.color, radius);
+      this.ctx.globalAlpha = appear;
+      this.ctx.drawImage(sprite, x - sprite.width / 2, y - sprite.height / 2);
+    }
+
+    this.ctx.globalAlpha = 1;
+    this.ctx.restore();
   }
 
   private drawSnake(snake: SnakeSnapshot): void {
     const skin = findSkin(snake.skin);
     if (snake.segments.length === 0) {
+      return;
+    }
+    const head = snake.segments[0];
+    const tail = snake.segments.at(-1) ?? head;
+    const reach = snake.segments.length * 12 + snake.radius;
+    if (!this.isVisible(head.x, head.y, reach) && !this.isVisible(tail.x, tail.y, snake.radius)) {
       return;
     }
 
@@ -179,11 +225,11 @@ export class Renderer {
     // Limites do viewport em coordenadas de mundo-camera (o ctx ja esta
     // escalado pelo zoom). Usado como LOD simples: pula o drawImage de discos
     // fora da tela, barateando cobras longas que saem do quadro.
-    const viewW = window.innerWidth / this.camera.zoom;
-    const viewH = window.innerHeight / this.camera.zoom;
+    const viewW = this.viewportWidth() / this.camera.zoom;
+    const viewH = this.viewportHeight() / this.camera.zoom;
 
     let carry = 0; // distancia restante ate o proximo disco ao cruzar segmentos
-    let arc = 0; // distancia total percorrida desde a cauda (para listras/taper)
+    let arc = 0; // distancia total percorrida desde a cauda (para listras)
 
     for (let i = n - 1; i > 0; i -= 1) {
       const a = segments[i]; // mais proximo da cauda
@@ -202,11 +248,7 @@ export class Renderer {
         const px = a.x + ux * d;
         const py = a.y + uy * d;
 
-        // headness: 0 na cauda, ~1 na cabeca. O Slither afina pouco; o corpo
-        // precisa continuar cheio para nao parecer um chicote.
-        const headness = 1 - (i - d / len) / n;
-        const taper = 0.82 + 0.18 * Math.min(1, headness * 3);
-        const r = radius * taper;
+        const r = radius;
 
         const screenX = px - this.camera.x;
         const screenY = py - this.camera.y;
@@ -260,12 +302,11 @@ export class Renderer {
     for (let i = segments.length - 2; i >= 0; i -= 1) {
       const current = segments[i];
       const next = segments[i + 1];
-      const taper = Math.max(0.25, 1 - (i / Math.max(segments.length, 1)) * 0.08);
       this.ctx.beginPath();
       this.ctx.moveTo(current.x - this.camera.x, current.y - this.camera.y);
       this.ctx.lineTo(next.x - this.camera.x, next.y - this.camera.y);
       this.ctx.strokeStyle = skin.body[i % skin.body.length];
-      this.ctx.lineWidth = snake.radius * 2 * taper;
+      this.ctx.lineWidth = snake.radius * 2;
       this.ctx.stroke();
     }
 
@@ -350,9 +391,31 @@ export class Renderer {
       const head = snake.segments[0];
       const x = Math.round((head.x - this.camera.x) * this.camera.zoom);
       const y = Math.round((head.y - this.camera.y - snake.radius - 12) * this.camera.zoom);
+      if (x < -120 || y < -30 || x > this.viewportWidth() + 120 || y > this.viewportHeight() + 30) {
+        continue;
+      }
       this.ctx.fillText(snake.name, x, y);
     }
 
     this.ctx.restore();
+  }
+
+  private isVisible(x: number, y: number, margin = 0): boolean {
+    const viewWidth = this.viewportWidth() / this.camera.zoom;
+    const viewHeight = this.viewportHeight() / this.camera.zoom;
+    const screenX = x - this.camera.x;
+    const screenY = y - this.camera.y;
+    return screenX >= -margin
+      && screenY >= -margin
+      && screenX <= viewWidth + margin
+      && screenY <= viewHeight + margin;
+  }
+
+  private viewportWidth(): number {
+    return window.visualViewport?.width ?? window.innerWidth;
+  }
+
+  private viewportHeight(): number {
+    return window.visualViewport?.height ?? window.innerHeight;
   }
 }

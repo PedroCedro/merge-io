@@ -20,9 +20,11 @@ export class SnakeEntity {
   segments: Vector[];
   input: PlayerInput;
   boostFoodDrops: Vector[] = [];
+  infiniteBoost = false;
   private headPath: Vector[];
   private segmentCount = SNAKE.initialLength;
   private mass = SNAKE.initialLength * SNAKE.massPerSegment;
+  private visualMass = this.mass;
 
   constructor(name: string, skin: SkinId, spawn = randomPoint(WORLD.width, WORLD.height), bot = false) {
     this.name = name.trim().slice(0, 16) || 'Jogador';
@@ -61,8 +63,14 @@ export class SnakeEntity {
     const desired = Math.atan2(this.input.target.y - this.head.y, this.input.target.x - this.head.x);
     this.angle = lerpAngle(this.angle, desired, SNAKE.turnLerp);
 
-    const boosting = this.input.boosting && this.mass > this.initialMass();
-    const speed = boosting ? SNAKE.boostSpeed : SNAKE.baseSpeed;
+    const boosting = this.input.boosting && (this.infiniteBoost || this.mass > this.initialMass());
+    const gainedMass = Math.max(0, this.mass - this.initialMass());
+    const baseSpeed = clamp(
+      SNAKE.baseSpeed + Math.sqrt(gainedMass) * SNAKE.speedMassScale,
+      SNAKE.baseSpeed,
+      SNAKE.maxBaseSpeed,
+    );
+    const speed = boosting ? baseSpeed * SNAKE.boostSpeedMultiplier : baseSpeed;
     const nextHead = {
       x: this.head.x + Math.cos(this.angle) * speed * dt,
       y: this.head.y + Math.sin(this.angle) * speed * dt,
@@ -70,15 +78,26 @@ export class SnakeEntity {
 
     this.headPath.unshift(nextHead);
 
-    if (boosting && Math.random() < 0.35) {
+    if (boosting && !this.infiniteBoost && Math.random() < 0.35) {
       const tail = this.segments.at(-1) ?? this.head;
       this.boostFoodDrops.push({ x: tail.x, y: tail.y });
       this.mass = Math.max(this.initialMass(), this.mass - SNAKE.boostMassCost);
     }
 
-    this.segmentCount = this.segmentCountForMass();
-    this.radius = this.radiusForMass();
-    const maxPathPoints = Math.max(80, this.segmentCount * 4);
+    const visualMassRate = this.visualMass < this.mass
+      ? SNAKE.visualMassGrowthPerSecond
+      : SNAKE.visualMassShrinkPerSecond;
+    const visualMassStep = visualMassRate * dt;
+    if (Math.abs(this.mass - this.visualMass) <= visualMassStep) {
+      this.visualMass = this.mass;
+    } else {
+      this.visualMass += Math.sign(this.mass - this.visualMass) * visualMassStep;
+    }
+
+    this.segmentCount = this.segmentCountForMass(this.visualMass);
+    this.radius = this.radiusForMass(this.visualMass);
+    const targetSegmentCount = this.segmentCountForMass(this.mass);
+    const maxPathPoints = Math.max(80, targetSegmentCount * 4);
     this.headPath.splice(maxPathPoints);
     this.segments = this.sampleHeadPath();
   }
@@ -93,7 +112,7 @@ export class SnakeEntity {
       score: this.score,
       radius: this.radius,
       angle: this.angle,
-      boosting: this.input.boosting && this.mass > this.initialMass(),
+      boosting: this.input.boosting && (this.infiniteBoost || this.mass > this.initialMass()),
       segments: this.segments,
     };
   }
@@ -102,48 +121,51 @@ export class SnakeEntity {
     return SNAKE.initialLength * SNAKE.massPerSegment;
   }
 
-  private segmentCountForMass(): number {
-    return Math.max(SNAKE.initialLength, Math.floor(this.mass / SNAKE.massPerSegment));
+  private segmentCountForMass(mass: number): number {
+    return Math.max(SNAKE.initialLength, Math.floor(mass / SNAKE.massPerSegment));
   }
 
-  private radiusForMass(): number {
-    const progress = (this.mass % SNAKE.massPerSegment) / SNAKE.massPerSegment;
-    return clamp(SNAKE.baseRadius + Math.sqrt(this.segmentCount) * 0.28 + progress * 0.85, SNAKE.baseRadius, 24);
+  private radiusForMass(mass: number): number {
+    const gainedMass = Math.max(0, mass - this.initialMass());
+    return clamp(
+      SNAKE.baseRadius + Math.sqrt(gainedMass) * SNAKE.radiusGrowth,
+      SNAKE.baseRadius,
+      SNAKE.maxRadius,
+    );
   }
 
   private sampleHeadPath(): Vector[] {
-    const sampled: Vector[] = [];
+    const sampled: Vector[] = [{ ...this.headPath[0] }];
+    let pathIndex = 0;
+    let traveled = 0;
+    let segmentDistance = 0;
 
-    for (let segmentIndex = 0; segmentIndex < this.segmentCount; segmentIndex += 1) {
-      sampled.push(this.pointAtDistance(segmentIndex * SNAKE.segmentGap));
+    for (let segmentIndex = 1; segmentIndex < this.segmentCount; segmentIndex += 1) {
+      const targetDistance = segmentIndex * SNAKE.segmentGap;
+
+      while (pathIndex < this.headPath.length - 1) {
+        const current = this.headPath[pathIndex];
+        const next = this.headPath[pathIndex + 1];
+        segmentDistance = Math.hypot(next.x - current.x, next.y - current.y);
+        if (traveled + segmentDistance >= targetDistance) {
+          const amount = (targetDistance - traveled) / Math.max(segmentDistance, 0.0001);
+          sampled.push({
+          x: current.x + (next.x - current.x) * amount,
+          y: current.y + (next.y - current.y) * amount,
+          });
+          break;
+        }
+
+        traveled += segmentDistance;
+        pathIndex += 1;
+      }
+
+      if (sampled.length <= segmentIndex) {
+        sampled.push({ ...(this.headPath.at(-1) ?? this.headPath[0]) });
+      }
     }
 
     return sampled;
-  }
-
-  private pointAtDistance(targetDistance: number): Vector {
-    if (targetDistance <= 0) {
-      return { ...this.headPath[0] };
-    }
-
-    let traveled = 0;
-    for (let i = 0; i < this.headPath.length - 1; i += 1) {
-      const current = this.headPath[i];
-      const next = this.headPath[i + 1];
-      const segmentDistance = Math.hypot(next.x - current.x, next.y - current.y);
-
-      if (traveled + segmentDistance >= targetDistance) {
-        const amount = (targetDistance - traveled) / Math.max(segmentDistance, 0.0001);
-        return {
-          x: current.x + (next.x - current.x) * amount,
-          y: current.y + (next.y - current.y) * amount,
-        };
-      }
-
-      traveled += segmentDistance;
-    }
-
-    return { ...(this.headPath.at(-1) ?? this.headPath[0]) };
   }
 }
 
@@ -161,7 +183,7 @@ const randomFoodValue = (): number => {
   return 4;
 };
 
-const foodRadiusForValue = (value: number): number => 3.8 + Math.sqrt(value) * 2.2;
+const foodRadiusForValue = (value: number): number => 2.6 + Math.sqrt(value) * 1.55;
 
 export const createFood = (
   position = randomPoint(WORLD.width, WORLD.height),

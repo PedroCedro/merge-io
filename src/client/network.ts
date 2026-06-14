@@ -9,8 +9,11 @@ export class GameSocket {
 
   connect(): void {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const devPort = window.location.port === '5173' ? '8080' : window.location.port;
-    const url = `${protocol}//${window.location.hostname}:${devPort}/ws`;
+    const configuredUrl = import.meta.env.VITE_WS_URL as string | undefined;
+    const url = configuredUrl
+      ?? (window.location.port === '5173'
+        ? `${protocol}//${window.location.hostname}:8080/ws`
+        : `${protocol}//${window.location.host}/ws`);
 
     this.socket = new WebSocket(url);
     this.socket.addEventListener('open', () => {

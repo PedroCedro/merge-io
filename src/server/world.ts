@@ -48,6 +48,21 @@ export class GameWorld {
     this.godSnakeIds.delete(id);
   }
 
+  setInfiniteBoost(id: string, enabled: boolean): void {
+    const snake = this.snakes.get(id);
+    if (snake) {
+      snake.infiniteBoost = enabled;
+    }
+  }
+
+  clearDeathMass(): void {
+    for (const [id, food] of this.foods) {
+      if (food.source === 'death') {
+        this.foods.delete(id);
+      }
+    }
+  }
+
   addSnake(name: string, skin: SkinId): SnakeEntity {
     const snake = new SnakeEntity(name, skin, this.safeSpawn());
     this.snakes.set(snake.id, snake);
@@ -110,12 +125,19 @@ export class GameWorld {
     return dead;
   }
 
-  snapshotFor(selfId: string | null, minimapMode: MinimapMode = 'basic'): WorldSnapshot {
+  snapshotFor(
+    selfId: string | null,
+    minimapMode: MinimapMode = 'basic',
+    spectatorCenter?: Vector,
+  ): WorldSnapshot {
     const self = selfId ? this.snakes.get(selfId) : null;
-    const center = self?.head ?? { x: WORLD.width / 2, y: WORLD.height / 2 };
+    const center = self?.head ?? spectatorCenter ?? { x: WORLD.width / 2, y: WORLD.height / 2 };
     const length = self?.length ?? SNAKE.initialLength;
     const areaOfInterest = Math.min(NETWORK.areaOfInterestMax, NETWORK.areaOfInterest + length * 10);
-    const foodLimit = Math.min(NETWORK.foodLimitPerClientMax, NETWORK.foodLimitPerClient + length * 12);
+    const foodLimit = Math.min(
+      NETWORK.foodLimitPerClientMax,
+      NETWORK.foodLimitPerClient + length * NETWORK.foodLimitPerSegment,
+    );
     const areaSq = areaOfInterest * areaOfInterest;
 
     const snakes = [...this.snakes.values()]
@@ -155,16 +177,33 @@ export class GameWorld {
   }
 
   private resolveFood(snake: SnakeEntity): void {
-    let pickedUp = 0;
+    let regularFoodPickedUp = 0;
+    let deathFoodPickedUp = 0;
+    let consumedMass = 0;
+
     for (const food of this.foods.values()) {
-      if (distance(snake.head, food) <= snake.radius + food.radius + SNAKE.foodPickupRadius * 0.45) {
-        snake.grow(food.value);
-        this.foods.delete(food.id);
-        pickedUp += 1;
-        if (pickedUp >= SNAKE.maxFoodPickupsPerTick) {
-          return;
-        }
+      const pickupDistance = snake.radius + food.radius + SNAKE.foodPickupRadius * 0.45;
+      if (distanceSquared(snake.head, food) > pickupDistance * pickupDistance) {
+        continue;
       }
+
+      if (food.source === 'death') {
+        if (deathFoodPickedUp >= SNAKE.maxDeathFoodPickupsPerTick) {
+          continue;
+        }
+        deathFoodPickedUp += 1;
+      } else if (regularFoodPickedUp >= SNAKE.maxFoodPickupsPerTick) {
+        continue;
+      } else {
+        regularFoodPickedUp += 1;
+      }
+
+      consumedMass += food.value;
+      this.foods.delete(food.id);
+    }
+
+    if (consumedMass > 0) {
+      snake.grow(consumedMass);
     }
   }
 
@@ -195,10 +234,27 @@ export class GameWorld {
   }
 
   private dropFoodFromSnake(snake: SnakeEntity): void {
-    const dropCount = Math.max(snake.length, Math.floor(snake.massValue));
-    for (let i = 0; i < dropCount; i += WORLD.deathFoodStep) {
-      const segment = snake.segments[i % snake.segments.length] ?? snake.head;
-      const food = createFood({ x: segment.x, y: segment.y }, 1, 'death', this.tick);
+    const droppedMass = Math.max(snake.length, Math.floor(snake.massValue));
+    const particleCount = Math.ceil(droppedMass / WORLD.deathFoodValue);
+    for (let particleIndex = 0; particleIndex < particleCount; particleIndex += 1) {
+      const pathLength = Math.max(1, snake.segments.length - 1);
+      const pathPosition = ((particleIndex + Math.random()) / particleCount) * pathLength;
+      const segmentIndex = Math.floor(pathPosition);
+      const nextIndex = Math.min(segmentIndex + 1, snake.segments.length - 1);
+      const amount = pathPosition - segmentIndex;
+      const segment = snake.segments[segmentIndex] ?? snake.head;
+      const next = snake.segments[nextIndex] ?? segment;
+
+      const centerX = segment.x + (next.x - segment.x) * amount;
+      const centerY = segment.y + (next.y - segment.y) * amount;
+      const spread = snake.radius * Math.sqrt(Math.random()) * 0.48;
+      const angle = Math.random() * Math.PI * 2;
+      const position = {
+        x: centerX + Math.cos(angle) * spread,
+        y: centerY + Math.sin(angle) * spread,
+      };
+      const remainingMass = droppedMass - particleIndex * WORLD.deathFoodValue;
+      const food = createFood(position, Math.min(WORLD.deathFoodValue, remainingMass), 'death', this.tick);
       this.foods.set(food.id, food);
     }
   }

@@ -7,11 +7,16 @@ body,
 #app {
   width: 100%;
   height: 100%;
+  min-height: 100%;
   margin: 0;
 }
 
 body {
+  position: fixed;
+  inset: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
   background: #000;
   color: #f6f6f6;
   font-family:
@@ -24,11 +29,14 @@ input {
 }
 
 #gameCanvas {
+  position: fixed;
+  inset: 0;
   display: block;
-  width: 100vw;
-  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
   background: #000;
   cursor: crosshair;
+  touch-action: none;
 }
 
 .hidden {
@@ -81,7 +89,85 @@ input {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin: 18px 0;
+}
+
+.skinPickerButton {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  width: 100%;
+  min-height: 54px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: #111;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.skinPickerButton .skinSwatch {
+  margin: 0;
+}
+
+.skinPickerButton strong {
+  color: #aaa;
+  font-size: 13px;
+}
+
+.skinEditorPanel {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+}
+
+.skinPreview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 76px;
+  margin-bottom: 6px;
+}
+
+.skinPreviewSegment {
+  width: 34px;
+  height: 34px;
+  margin-left: -10px;
+  border-radius: 50%;
+  box-shadow:
+    inset -5px -6px 8px rgba(0, 0, 0, 0.34),
+    inset 4px 4px 7px rgba(255, 255, 255, 0.28);
+}
+
+.skinPreviewSegment:first-child {
+  margin-left: 0;
+}
+
+.skinPreviewName {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.skinCatalog {
+  display: grid;
+  gap: 16px;
+  max-height: min(430px, calc(100vh - 310px));
+  margin-bottom: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+  text-align: left;
+}
+
+.skinCatalog h3 {
+  margin: 0 0 8px;
+  color: #aaa;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.skinEditorPanel .skinButton {
+  min-height: 62px;
+  padding: 8px 4px;
 }
 
 .modeSelector {
@@ -156,10 +242,22 @@ input {
   color: #aaa;
 }
 
-.menuMessage {
-  min-height: 20px;
-  margin: 12px 0 0;
-  color: #ffb6b6;
+.gameOverPanel {
+  width: min(340px, calc(100vw - 32px));
+}
+
+.gameOverLabel {
+  margin: 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.gameOverScore {
+  display: block;
+  margin: 4px 0 24px;
+  color: #fff;
+  font-size: 52px;
+  line-height: 1;
 }
 
 #hud {
@@ -330,6 +428,10 @@ input {
   font-weight: 800;
 }
 
+.mobileControls {
+  display: none;
+}
+
 @media (max-width: 700px) {
   .panel {
     padding: 18px;
@@ -359,5 +461,228 @@ input {
   .minimapPanel {
     top: 66px;
     left: 10px;
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  .panel {
+    width: min(360px, calc(100dvw - 28px));
+    max-height: calc(100dvh - 16px);
+    padding: 10px 12px;
+    overflow-y: auto;
+  }
+
+  .panel h1 {
+    margin-bottom: 7px;
+    font-size: clamp(24px, 7dvh, 34px);
+  }
+
+  .panel h2 {
+    margin-bottom: 7px;
+    font-size: clamp(19px, 5dvh, 25px);
+  }
+
+  #playerName {
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .modeSelector {
+    margin: 8px 0;
+  }
+
+  .modeButton {
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .skinPickerButton {
+    min-height: 40px;
+    margin: 6px 0;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .primaryButton {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  .secondaryButton {
+    height: 32px;
+    margin-top: 5px;
+    font-size: 12px;
+  }
+
+  #connectionStatus {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  #hud {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    gap: 5px;
+  }
+
+  .metric {
+    min-width: 62px;
+    padding: 4px 6px;
+  }
+
+  .metric span {
+    font-size: 9px;
+  }
+
+  .metric strong {
+    font-size: 14px;
+  }
+
+  .minimapPanel,
+  #minimapCanvas {
+    width: 82px;
+    height: 82px;
+  }
+
+  .minimapPanel {
+    top: calc(max(8px, env(safe-area-inset-top)) + 44px);
+    left: max(8px, env(safe-area-inset-left));
+  }
+
+  .leaderboard {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: auto;
+    width: min(148px, 21dvw);
+    max-height: 44dvh;
+    padding: 6px;
+    overflow: hidden;
+  }
+
+  .leaderboard ol {
+    gap: 3px;
+    padding-left: 18px;
+  }
+
+  .leaderboard li {
+    font-size: 9px;
+  }
+
+  .leaderboard h2 {
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .settingsButton {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: 32px;
+    height: 32px;
+  }
+
+  .devControls {
+    display: none !important;
+  }
+
+  .mobileControls:not(.hidden) {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    display: block;
+    pointer-events: none;
+  }
+
+  .mobileJoystick {
+    position: absolute;
+    left: max(18px, env(safe-area-inset-left));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    display: none;
+    width: 92px;
+    height: 92px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.36);
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  .joystickMode .mobileJoystick {
+    display: grid;
+    place-items: center;
+  }
+
+  .mobileJoystickKnob {
+    width: 38px;
+    height: 38px;
+    border: 2px solid rgba(255, 255, 255, 0.42);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+  }
+
+  .mobileBoostButton {
+    position: absolute;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom));
+    width: 72px;
+    height: 72px;
+    border: 2px solid rgba(255, 255, 255, 0.32);
+    border-radius: 50%;
+    background: rgba(0, 210, 255, 0.16);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 11px;
+    font-weight: 900;
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  .mobileBoostButton.active {
+    background: rgba(0, 225, 255, 0.42);
+    box-shadow: 0 0 26px rgba(0, 220, 255, 0.6);
+    transform: scale(0.94);
+  }
+
+  .skinEditorPanel {
+    width: min(520px, calc(100dvw - 24px));
+  }
+
+  .skinCatalog {
+    max-height: calc(100dvh - 190px);
+  }
+
+  .skinEditorPanel .skinGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .skinEditorPanel .skinButton {
+    min-height: 48px;
+    font-size: 10px;
+  }
+
+  .skinPreview {
+    min-height: 48px;
+  }
+
+  .skinPreviewSegment {
+    width: 24px;
+    height: 24px;
+    margin-left: -7px;
+  }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #app::after {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    background: #000;
+    color: #fff;
+    content: "Gire o celular para jogar";
+    font-size: 20px;
+    font-weight: 800;
   }
 }

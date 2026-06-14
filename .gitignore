@@ -4,3 +4,5 @@ references/
 
 *.log
 *.err.log
+
+.vercel
