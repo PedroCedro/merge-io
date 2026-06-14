@@ -1,0 +1,60 @@
+const requiredElement = <T extends Element>(selector: string): T => {
+  const element = document.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`Elemento obrigatorio nao encontrado: ${selector}`);
+  }
+  return element;
+};
+
+export const ui = {
+  canvas: requiredElement<HTMLCanvasElement>('#gameCanvas'),
+  startMenu: requiredElement<HTMLElement>('#startMenu'),
+  playButton: requiredElement<HTMLButtonElement>('#playButton'),
+  fullscreenButton: requiredElement<HTMLButtonElement>('#fullscreenButton'),
+  menuSettingsButton: requiredElement<HTMLButtonElement>('#menuSettingsButton'),
+  playerName: requiredElement<HTMLInputElement>('#playerName'),
+  modeSelector: requiredElement<HTMLElement>('#modeSelector'),
+  openSkinEditorButton: requiredElement<HTMLButtonElement>('#openSkinEditorButton'),
+  selectedSkinSwatch: requiredElement<HTMLElement>('#selectedSkinSwatch'),
+  selectedSkinName: requiredElement<HTMLElement>('#selectedSkinName'),
+  skinEditorPanel: requiredElement<HTMLElement>('#skinEditorPanel'),
+  skinPreview: requiredElement<HTMLElement>('#skinPreview'),
+  skinPreviewName: requiredElement<HTMLElement>('#skinPreviewName'),
+  colorSkinGrid: requiredElement<HTMLElement>('#colorSkinGrid'),
+  countrySkinGrid: requiredElement<HTMLElement>('#countrySkinGrid'),
+  confirmSkinButton: requiredElement<HTMLButtonElement>('#confirmSkinButton'),
+  cancelSkinButton: requiredElement<HTMLButtonElement>('#cancelSkinButton'),
+  statusText: requiredElement<HTMLElement>('#connectionStatus'),
+  hud: requiredElement<HTMLElement>('#hud'),
+  minimapPanel: requiredElement<HTMLElement>('#minimapPanel'),
+  minimapCanvas: requiredElement<HTMLCanvasElement>('#minimapCanvas'),
+  leaderboard: requiredElement<HTMLElement>('#leaderboard'),
+  leaderboardList: requiredElement<HTMLOListElement>('#leaderboardList'),
+  scoreValue: requiredElement<HTMLElement>('#scoreValue'),
+  lengthValue: requiredElement<HTMLElement>('#lengthValue'),
+  gameOverPanel: requiredElement<HTMLElement>('#gameOverPanel'),
+  gameOverScore: requiredElement<HTMLElement>('#gameOverScore'),
+  playAgainButton: requiredElement<HTMLButtonElement>('#playAgainButton'),
+  backToMenuButton: requiredElement<HTMLButtonElement>('#backToMenuButton'),
+  settingsButton: requiredElement<HTMLButtonElement>('#settingsButton'),
+  settingsPanel: requiredElement<HTMLElement>('#settingsPanel'),
+  settingsBackButton: requiredElement<HTMLButtonElement>('#settingsBackButton'),
+  minimapMode: requiredElement<HTMLSelectElement>('#minimapMode'),
+  boostGlowMode: requiredElement<HTMLSelectElement>('#boostGlowMode'),
+  snakeVisualMode: requiredElement<HTMLSelectElement>('#snakeVisualMode'),
+  foodAnimationMode: requiredElement<HTMLSelectElement>('#foodAnimationMode'),
+  controlMode: requiredElement<HTMLSelectElement>('#controlMode'),
+  mobileControlMode: requiredElement<HTMLSelectElement>('#mobileControlMode'),
+  mobileControls: requiredElement<HTMLElement>('#mobileControls'),
+  mobileJoystick: requiredElement<HTMLElement>('#mobileJoystick'),
+  mobileJoystickKnob: requiredElement<HTMLElement>('#mobileJoystickKnob'),
+  mobileBoostButton: requiredElement<HTMLButtonElement>('#mobileBoostButton'),
+  devControls: requiredElement<HTMLElement>('#devControls'),
+  fpsValue: requiredElement<HTMLElement>('#fpsValue'),
+  pauseButton: requiredElement<HTMLButtonElement>('#pauseButton'),
+  godModeButton: requiredElement<HTMLButtonElement>('#godModeButton'),
+  infiniteBoostButton: requiredElement<HTMLButtonElement>('#infiniteBoostButton'),
+  clearDeathMassButton: requiredElement<HTMLButtonElement>('#clearDeathMassButton'),
+  autoCircleButton: requiredElement<HTMLButtonElement>('#autoCircleButton'),
+};
+

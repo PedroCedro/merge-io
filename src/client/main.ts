@@ -1,9 +1,11 @@
 import './styles.css';
-import { SKINS, type ControlMode, type GameMode, type MinimapMode, type SkinId, type SnakeSnapshot, type Vector, type WorldSnapshot } from '../shared/types';
+import { SKINS, type ControlMode, type GameMode, type MinimapMode, type SkinId, type WorldSnapshot } from '../shared/types';
 import { InputController } from './input';
 import { Minimap } from './minimap';
+import { MobileControls } from './mobileControls';
 import { GameSocket } from './network';
 import { Renderer } from './renderer';
+import { interpolateSnapshot } from './snapshotInterpolation';
 import {
   loadSettings,
   saveSettings,
@@ -12,110 +14,59 @@ import {
   type MobileControlMode,
   type SnakeVisualMode,
 } from './settings';
+import { ui } from './ui';
 
-const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
-const startMenu = document.querySelector<HTMLElement>('#startMenu');
-const playButton = document.querySelector<HTMLButtonElement>('#playButton');
-const fullscreenButton = document.querySelector<HTMLButtonElement>('#fullscreenButton');
-const menuSettingsButton = document.querySelector<HTMLButtonElement>('#menuSettingsButton');
-const playerName = document.querySelector<HTMLInputElement>('#playerName');
-const modeSelector = document.querySelector<HTMLElement>('#modeSelector');
-const openSkinEditorButton = document.querySelector<HTMLButtonElement>('#openSkinEditorButton');
-const selectedSkinSwatch = document.querySelector<HTMLElement>('#selectedSkinSwatch');
-const selectedSkinName = document.querySelector<HTMLElement>('#selectedSkinName');
-const skinEditorPanel = document.querySelector<HTMLElement>('#skinEditorPanel');
-const skinPreview = document.querySelector<HTMLElement>('#skinPreview');
-const skinPreviewName = document.querySelector<HTMLElement>('#skinPreviewName');
-const colorSkinGrid = document.querySelector<HTMLElement>('#colorSkinGrid');
-const countrySkinGrid = document.querySelector<HTMLElement>('#countrySkinGrid');
-const confirmSkinButton = document.querySelector<HTMLButtonElement>('#confirmSkinButton');
-const cancelSkinButton = document.querySelector<HTMLButtonElement>('#cancelSkinButton');
-const statusText = document.querySelector<HTMLElement>('#connectionStatus');
-const hud = document.querySelector<HTMLElement>('#hud');
-const minimapPanel = document.querySelector<HTMLElement>('#minimapPanel');
-const minimapCanvas = document.querySelector<HTMLCanvasElement>('#minimapCanvas');
-const leaderboard = document.querySelector<HTMLElement>('#leaderboard');
-const leaderboardList = document.querySelector<HTMLOListElement>('#leaderboardList');
-const scoreValue = document.querySelector<HTMLElement>('#scoreValue');
-const lengthValue = document.querySelector<HTMLElement>('#lengthValue');
-const gameOverPanel = document.querySelector<HTMLElement>('#gameOverPanel');
-const gameOverScore = document.querySelector<HTMLElement>('#gameOverScore');
-const playAgainButton = document.querySelector<HTMLButtonElement>('#playAgainButton');
-const backToMenuButton = document.querySelector<HTMLButtonElement>('#backToMenuButton');
-const settingsButton = document.querySelector<HTMLButtonElement>('#settingsButton');
-const settingsPanel = document.querySelector<HTMLElement>('#settingsPanel');
-const settingsBackButton = document.querySelector<HTMLButtonElement>('#settingsBackButton');
-const minimapMode = document.querySelector<HTMLSelectElement>('#minimapMode');
-const boostGlowMode = document.querySelector<HTMLSelectElement>('#boostGlowMode');
-const snakeVisualMode = document.querySelector<HTMLSelectElement>('#snakeVisualMode');
-const foodAnimationMode = document.querySelector<HTMLSelectElement>('#foodAnimationMode');
-const controlMode = document.querySelector<HTMLSelectElement>('#controlMode');
-const mobileControlMode = document.querySelector<HTMLSelectElement>('#mobileControlMode');
-const mobileControls = document.querySelector<HTMLElement>('#mobileControls');
-const mobileJoystick = document.querySelector<HTMLElement>('#mobileJoystick');
-const mobileJoystickKnob = document.querySelector<HTMLElement>('#mobileJoystickKnob');
-const mobileBoostButton = document.querySelector<HTMLButtonElement>('#mobileBoostButton');
-const devControls = document.querySelector<HTMLElement>('#devControls');
-const fpsValue = document.querySelector<HTMLElement>('#fpsValue');
-const pauseButton = document.querySelector<HTMLButtonElement>('#pauseButton');
-const godModeButton = document.querySelector<HTMLButtonElement>('#godModeButton');
-const infiniteBoostButton = document.querySelector<HTMLButtonElement>('#infiniteBoostButton');
-const clearDeathMassButton = document.querySelector<HTMLButtonElement>('#clearDeathMassButton');
-const autoCircleButton = document.querySelector<HTMLButtonElement>('#autoCircleButton');
-
-if (
-  !canvas ||
-  !startMenu ||
-  !playButton ||
-  !fullscreenButton ||
-  !menuSettingsButton ||
-  !playerName ||
-  !modeSelector ||
-  !openSkinEditorButton ||
-  !selectedSkinSwatch ||
-  !selectedSkinName ||
-  !skinEditorPanel ||
-  !skinPreview ||
-  !skinPreviewName ||
-  !colorSkinGrid ||
-  !countrySkinGrid ||
-  !confirmSkinButton ||
-  !cancelSkinButton ||
-  !statusText ||
-  !hud ||
-  !minimapPanel ||
-  !minimapCanvas ||
-  !leaderboard ||
-  !leaderboardList ||
-  !scoreValue ||
-  !lengthValue ||
-  !gameOverPanel ||
-  !gameOverScore ||
-  !playAgainButton ||
-  !backToMenuButton ||
-  !settingsButton ||
-  !settingsPanel ||
-  !settingsBackButton ||
-  !minimapMode ||
-  !boostGlowMode ||
-  !snakeVisualMode ||
-  !foodAnimationMode ||
-  !controlMode ||
-  !mobileControlMode ||
-  !mobileControls ||
-  !mobileJoystick ||
-  !mobileJoystickKnob ||
-  !mobileBoostButton ||
-  !devControls ||
-  !fpsValue ||
-  !pauseButton ||
-  !godModeButton ||
-  !infiniteBoostButton ||
-  !clearDeathMassButton ||
-  !autoCircleButton
-) {
-  throw new Error('Merge.IO UI incompleta');
-}
+const {
+  canvas,
+  startMenu,
+  playButton,
+  fullscreenButton,
+  menuSettingsButton,
+  playerName,
+  modeSelector,
+  openSkinEditorButton,
+  selectedSkinSwatch,
+  selectedSkinName,
+  skinEditorPanel,
+  skinPreview,
+  skinPreviewName,
+  colorSkinGrid,
+  countrySkinGrid,
+  confirmSkinButton,
+  cancelSkinButton,
+  statusText,
+  hud,
+  minimapPanel,
+  minimapCanvas,
+  leaderboard,
+  leaderboardList,
+  scoreValue,
+  lengthValue,
+  gameOverPanel,
+  gameOverScore,
+  playAgainButton,
+  backToMenuButton,
+  settingsButton,
+  settingsPanel,
+  settingsBackButton,
+  minimapMode,
+  boostGlowMode,
+  snakeVisualMode,
+  foodAnimationMode,
+  controlMode,
+  mobileControlMode,
+  mobileControls,
+  mobileJoystick,
+  mobileJoystickKnob,
+  mobileBoostButton,
+  devControls,
+  fpsValue,
+  pauseButton,
+  godModeButton,
+  infiniteBoostButton,
+  clearDeathMassButton,
+  autoCircleButton,
+} = ui;
 
 const context = canvas.getContext('2d');
 if (!context) {
@@ -141,6 +92,14 @@ const socket = new GameSocket();
 const input = new InputController(canvas);
 const renderer = new Renderer(canvas, context);
 const minimap = new Minimap(minimapCanvas);
+new MobileControls(
+  {
+    joystick: mobileJoystick,
+    joystickKnob: mobileJoystickKnob,
+    boostButton: mobileBoostButton,
+  },
+  input,
+);
 let visualSettings = loadSettings();
 
 const renderSkins = (): void => {
@@ -384,54 +343,6 @@ const getControlTarget = (): { x: number; y: number } => {
   };
 };
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
-
-const lerp = (from: number, to: number, amount: number): number => from + (to - from) * amount;
-
-const lerpAngle = (from: number, to: number, amount: number): number => {
-  const delta = Math.atan2(Math.sin(to - from), Math.cos(to - from));
-  return from + delta * amount;
-};
-
-const lerpPoint = (from: Vector, to: Vector, amount: number): Vector => ({
-  x: lerp(from.x, to.x, amount),
-  y: lerp(from.y, to.y, amount),
-});
-
-const interpolateSnake = (from: SnakeSnapshot | undefined, to: SnakeSnapshot, amount: number): SnakeSnapshot => {
-  if (!from) {
-    return to;
-  }
-
-  const fallbackTail = from.segments.at(-1) ?? to.segments.at(-1) ?? to.segments[0];
-
-  return {
-    ...to,
-    radius: lerp(from.radius, to.radius, amount),
-    angle: lerpAngle(from.angle, to.angle, amount),
-    boosting: to.boosting,
-    segments: to.segments.map((segment, index) => lerpPoint(from.segments[index] ?? fallbackTail, segment, amount)),
-  };
-};
-
-const getDrawableSnapshot = (): WorldSnapshot | null => {
-  if (!snapshot) {
-    return null;
-  }
-
-  if (!previousSnapshot) {
-    return snapshot;
-  }
-
-  const amount = clamp((performance.now() - snapshotReceivedAt) / 55, 0, 1);
-  const previousById = new Map(previousSnapshot.snakes.map((snake) => [snake.id, snake]));
-
-  return {
-    ...snapshot,
-    snakes: snapshot.snakes.map((snake) => interpolateSnake(previousById.get(snake.id), snake, amount)),
-  };
-};
-
 socket.onMessage((message) => {
   if (message.type === 'welcome') {
     selfId = message.id;
@@ -534,57 +445,6 @@ mobileControlMode.addEventListener('change', () => {
   syncSettingsUi();
 });
 
-let joystickPointerId: number | null = null;
-const updateJoystick = (clientX: number, clientY: number): void => {
-  const rect = mobileJoystick.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  const maxDistance = rect.width * 0.3;
-  const dx = clientX - centerX;
-  const dy = clientY - centerY;
-  const distance = Math.hypot(dx, dy);
-  const scale = distance > maxDistance ? maxDistance / distance : 1;
-  const knobX = dx * scale;
-  const knobY = dy * scale;
-  mobileJoystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-  input.setVirtualDirection(
-    distance > 4 ? { x: dx / distance, y: dy / distance } : { x: 0, y: 0 },
-  );
-};
-
-const releaseJoystick = (): void => {
-  joystickPointerId = null;
-  mobileJoystickKnob.style.transform = 'translate(0, 0)';
-  input.setVirtualDirection({ x: 0, y: 0 });
-};
-
-mobileJoystick.addEventListener('pointerdown', (event) => {
-  joystickPointerId = event.pointerId;
-  mobileJoystick.setPointerCapture(event.pointerId);
-  updateJoystick(event.clientX, event.clientY);
-  event.preventDefault();
-});
-mobileJoystick.addEventListener('pointermove', (event) => {
-  if (event.pointerId === joystickPointerId) {
-    updateJoystick(event.clientX, event.clientY);
-  }
-});
-mobileJoystick.addEventListener('pointerup', releaseJoystick);
-mobileJoystick.addEventListener('pointercancel', releaseJoystick);
-
-const startMobileBoost = (event: PointerEvent): void => {
-  input.setBoosting(true);
-  mobileBoostButton.classList.add('active');
-  mobileBoostButton.setPointerCapture(event.pointerId);
-  event.preventDefault();
-};
-const stopMobileBoost = (): void => {
-  input.setBoosting(false);
-  mobileBoostButton.classList.remove('active');
-};
-mobileBoostButton.addEventListener('pointerdown', startMobileBoost);
-mobileBoostButton.addEventListener('pointerup', stopMobileBoost);
-mobileBoostButton.addEventListener('pointercancel', stopMobileBoost);
 pauseButton.addEventListener('click', () => {
   paused = !paused;
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
@@ -625,7 +485,7 @@ const loop = (): void => {
   statusText.textContent = socket.connected ? 'Servidor online' : 'Reconectando...';
   playButton.disabled = !socket.connected;
 
-  const drawableSnapshot = getDrawableSnapshot();
+  const drawableSnapshot = interpolateSnapshot(snapshot, previousSnapshot, snapshotReceivedAt);
   if (drawableSnapshot) {
     renderer.draw(drawableSnapshot);
     minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);

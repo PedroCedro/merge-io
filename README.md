@@ -1,90 +1,230 @@
 # Merge.IO
 
-Merge.IO e um jogo .io inspirado em mecanicas de Slither.io, escrito em TypeScript, com servidor autoritativo via WebSocket, mapa preto limpo, skins, ranking em tempo real e colisao melhorada por distancia ponto-segmento.
+Merge.IO é um jogo `.io` inspirado nas mecânicas de Slither.io. O projeto utiliza
+TypeScript no cliente e no servidor, renderização em Canvas 2D e um servidor
+autoritativo que sincroniza as partidas por WebSocket.
 
-## Como Rodar
+## Funcionalidades
+
+- Movimento contínuo com corpo reamostrado em uma trilha de posições.
+- Crescimento visual suave, sem aumentar o corpo inteiro no instante da coleta.
+- Comidas comuns e massas de cobras derrotadas com valores diferentes.
+- Bots para partidas individuais.
+- Ranking e minimapa em tempo real.
+- Colisão com paredes, corpo próprio e outras cobras.
+- Boost normal e boost infinito para testes.
+- Skins coloridas e skins inspiradas em países.
+- Controles por mouse, teclado, toque ou joystick virtual.
+- Interface adaptada para celulares em orientação horizontal.
+- Modo PWA com manifesto, ícones e service worker.
+- Ferramentas de desenvolvimento para pausa, invencibilidade, círculo automático
+  e limpeza de massas.
+
+## Tecnologias
+
+- TypeScript
+- Vite
+- Canvas 2D
+- Node.js
+- Express
+- WebSocket com `ws`
+
+## Requisitos
+
+- Node.js 20 ou superior
+- npm
+
+## Instalação
 
 ```bash
+git clone https://github.com/PedroCedro/merge-io.git
+cd merge-io
 npm install
+```
+
+## Desenvolvimento
+
+Inicie o cliente Vite e o servidor WebSocket:
+
+```bash
 npm run dev
 ```
 
-Abra `http://localhost:5173`.
+Depois, abra:
 
-Para build de producao:
+```text
+http://localhost:5173
+```
+
+Durante o desenvolvimento, o Vite encaminha as conexões de `/ws` para o
+servidor local na porta `8080`.
+
+Também é possível executar cada processo separadamente:
+
+```bash
+npm run dev:client
+npm run dev:server
+```
+
+## Produção local
+
+Gere os arquivos do cliente:
 
 ```bash
 npm run build
+```
+
+Inicie o servidor:
+
+```bash
 npm start
 ```
 
-O servidor de producao sobe em `http://localhost:8080` e serve os arquivos gerados em `dist/`.
+Quando a pasta `dist` existe, o servidor Express entrega o frontend e atende o
+WebSocket no mesmo endereço:
+
+```text
+http://localhost:8080
+```
+
+## Scripts
+
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Inicia cliente e servidor em modo de desenvolvimento |
+| `npm run dev:client` | Inicia apenas o Vite na porta `5173` |
+| `npm run dev:server` | Inicia apenas o servidor na porta `8080` |
+| `npm run check` | Executa a verificação de tipos |
+| `npm run build` | Verifica os tipos e gera o frontend em `dist` |
+| `npm start` | Inicia o servidor de produção |
 
 ## Controles
 
-- Mouse ou toque: direcao da cobra
-- Espaco: boost, consumindo comprimento
-- Comida: aumenta score e tamanho
-- Colisao com parede, corpo de outra cobra ou proprio corpo: morte
+### Computador
+
+- Mouse: direciona a cobra.
+- Teclado: alternativa de direção ativada nas configurações.
+- Espaço ou botão do mouse: ativa o boost.
+
+### Celular
+
+- Toque: direciona a cobra pela posição tocada.
+- Joystick: controle virtual opcional.
+- Botão `BOOST`: ativa a aceleração.
+- Botão `Tela cheia`: solicita tela cheia e orientação horizontal quando o
+  navegador permite.
 
 ## Arquitetura
 
 ```text
 src/
-  shared/
-    types.ts          Tipos de mensagens, snapshots e skins
-  server/
-    server.ts         HTTP + WebSocket
-    world.ts          Tick autoritativo, comida, ranking e colisao
-    entities.ts       SnakeEntity e Food
-    math.ts           Vetores, angulos e ponto-segmento
-    config.ts         Tuning do jogo
-  client/
-    main.ts           Bootstrap da UI e loop
-    network.ts        Cliente WebSocket
-    input.ts          Mouse, toque e boost
-    renderer.ts       Canvas 2D, camera, skins e arena
-    styles.css        UI minimalista
+├── client/
+│   ├── main.ts                   Estado e fluxo principal do cliente
+│   ├── ui.ts                     Referências obrigatórias da interface
+│   ├── input.ts                  Mouse, teclado, toque e boost
+│   ├── mobileControls.ts         Joystick e boost virtual
+│   ├── network.ts                Cliente WebSocket
+│   ├── renderer.ts               Renderização da arena em Canvas 2D
+│   ├── minimap.ts                Renderização do minimapa
+│   ├── snapshotInterpolation.ts  Suavização entre estados do servidor
+│   ├── settings.ts               Preferências persistidas no navegador
+│   ├── snakeSprites.ts           Elementos visuais da cobra
+│   └── styles.css                Layout responsivo e estilos
+├── server/
+│   ├── server.ts                 Servidor HTTP e protocolo WebSocket
+│   ├── world.ts                  Simulação, bots, colisões e snapshots
+│   ├── entities.ts               Cobra, crescimento e criação de comidas
+│   ├── math.ts                   Funções geométricas
+│   └── config.ts                 Parâmetros de balanceamento
+└── shared/
+    └── types.ts                  Tipos, mensagens e catálogo de skins
 ```
 
-## Analise dos Repos de Referencia
+## Fluxo da partida
 
-1. `mathe00/slither-clone-sio`
-   Melhor base de produto. Traz multiplayer, WebGL, ranking, skins, admin, AoI, minimapa, modo offline e colisao com workers. Aproveitavel: arquitetura modular, leaderboard, sistema de skins, food attraction, AoI e colisao precisa. Risco: muito grande, arquivado, cheio de features fora do escopo inicial.
+1. O cliente abre uma conexão WebSocket.
+2. Ao clicar em **Jogar**, envia nome, skin, modo e preferência do minimapa.
+3. O servidor cria a cobra e retorna o primeiro snapshot.
+4. O cliente envia apenas direção e estado do boost.
+5. O servidor calcula movimento, crescimento, colisões, comidas e ranking.
+6. Cada jogador recebe um recorte do mundo baseado na sua área de interesse.
+7. O cliente interpola os snapshots para suavizar o movimento na tela.
 
-2. `karankashyap04/slither-plus`
-   Melhor referencia academica para lobbies e multiplayer com WebSockets. Aproveitavel: separacao cliente/servidor, game state sincronizado, ranking e salas privadas. Risco: backend Java e React CRA antigo, mais pesado para evoluir aqui.
+## Configuração do WebSocket
 
-3. `knagaitsev/slither.io-clone`
-   Melhor referencia pedagogica e visual. Aproveitavel: movimento, crescimento, sombras, olhos, comida ao morrer e simplicidade de game loop. Risco: sem multiplayer e com Phaser antigo/local.
+O cliente procura o servidor nesta ordem:
 
-4. `iiegor/slither`
-   Melhor referencia de protocolo, mas a menos reaproveitavel diretamente. Aproveitavel: ideia de mensagens pequenas e servidor Node WebSocket. Risco: CoffeeScript, `ws` muito antigo, incompleto.
+1. Variável `VITE_WS_URL`.
+2. Porta `8080` quando o Vite está em `5173`.
+3. Caminho `/ws` no mesmo domínio do frontend.
 
-## Decisoes do Merge.IO
+Exemplo para usar um servidor externo:
 
-- TypeScript end-to-end, com tipos compartilhados entre servidor e cliente.
-- WebSocket puro (`ws`) em vez de Socket.IO, para manter protocolo pequeno e explicito.
-- Servidor autoritativo: o cliente envia apenas alvo e boost; o servidor calcula movimento, comida, morte e ranking.
-- Movimento inspirado no `headPath` do `knagaitsev/slither.io-clone`: a cabeca grava uma trilha e o corpo e reamostrado com espacamento fixo para evitar movimento comprimido ou nervoso.
-- Colisao melhorada: cabeca contra segmentos usando distancia ponto-segmento, mais precisa que colisao apenas por pontos.
-- Area of Interest: cada cliente recebe cobras e comidas proximas, reduzindo payload.
-- Mapa preto limpo com borda discreta e pontos suaves, sem fundo poluido.
-- Skins declarativas em `src/shared/types.ts`, compartilhadas por menu, render e ranking.
+```bash
+VITE_WS_URL=wss://seu-servidor.example.com/ws npm run build
+```
 
-## Scripts
+No PowerShell:
 
-- `npm run dev`: Vite + servidor WebSocket em modo watch
-- `npm run dev:client`: apenas cliente em `5173`
-- `npm run dev:server`: apenas servidor em `8080`
-- `npm run check`: typecheck
-- `npm run build`: typecheck + build Vite
-- `npm start`: servidor em `8080`, servindo `dist/` quando existir
+```powershell
+$env:VITE_WS_URL = 'wss://seu-servidor.example.com/ws'
+npm run build
+```
 
-## Proximos Passos
+## PWA e celular
 
-- Adicionar bots para preencher a arena em desenvolvimento solo.
-- Criar salas privadas com codigo, baseado na melhor ideia do Slither+.
-- Adicionar minimapa e interpolacao de snapshots para movimento ainda mais suave.
-- Persistir estatisticas e nomes reservados.
-- Criar assets proprios para comidas, boosts e cosméticos.
+O projeto contém:
+
+- `public/manifest.webmanifest`
+- `public/sw.js`
+- ícones comuns e máscara para instalação
+- preferência por orientação horizontal
+
+Para instalar o PWA e usar recursos como service worker e tela cheia com maior
+compatibilidade, abra o jogo por HTTPS.
+
+## Deploy
+
+O arquivo `vercel.json` publica o frontend Vite na Vercel. Porém, o servidor do
+jogo mantém conexões WebSocket persistentes e não pode ser substituído por uma
+publicação somente estática.
+
+Em produção, utilize uma destas opções:
+
+- Hospede o servidor Node.js em uma plataforma compatível com WebSocket e defina
+  `VITE_WS_URL` antes do build.
+- Execute frontend e servidor juntos em um host Node.js.
+- Durante testes, exponha o servidor local por um túnel HTTPS/WSS.
+
+Sem um servidor WebSocket acessível, a interface permanece em
+`Reconectando...` e o botão **Jogar** fica desabilitado.
+
+## Parâmetros de balanceamento
+
+Os principais valores ficam em `src/server/config.ts`:
+
+- tamanho e quantidade de comidas;
+- velocidade e aceleração;
+- crescimento do raio e do corpo;
+- custo do boost;
+- quantidade de bots;
+- área de interesse;
+- limites de dados enviados a cada cliente.
+
+Alterações nesse arquivo afetam diretamente desempenho e jogabilidade. Faça
+ajustes pequenos e teste com cobras grandes antes de publicar.
+
+## Estado do projeto
+
+O projeto está em desenvolvimento ativo. As principais áreas ainda abertas são:
+
+- hospedar o servidor WebSocket em produção;
+- adicionar testes automatizados para física e protocolo;
+- medir desempenho em celulares de entrada;
+- revisar segurança e limites para partidas públicas;
+- separar salas e partidas independentes.
+
+## Licença
+
+Este repositório ainda não possui uma licença definida. Até que uma licença seja
+adicionada, o código permanece com todos os direitos reservados ao autor.
