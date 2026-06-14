@@ -2,8 +2,14 @@ import express from 'express';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { ClientMessage, MinimapMode, ServerMessage, Vector } from '../shared/types';
-import { SERVER_PORT, TICK_RATE } from './config';
+import type {
+  ClientMessage,
+  ClientPerformanceProfile,
+  MinimapMode,
+  ServerMessage,
+  Vector,
+} from '../shared/types';
+import { NETWORK, SERVER_PORT, TICK_RATE } from './config';
 import { GameWorld } from './world';
 
 const app = express();
@@ -22,6 +28,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 const world = new GameWorld();
 const clients = new Map<WebSocket, string | null>();
 const clientMinimapModes = new Map<WebSocket, MinimapMode>();
+const clientPerformanceProfiles = new Map<WebSocket, ClientPerformanceProfile>();
 const spectatorCenters = new Map<WebSocket, Vector>();
 
 const send = (socket: WebSocket, message: ServerMessage): void => {
@@ -62,10 +69,11 @@ wss.on('connection', (socket) => {
       const snake = world.addSnake(message.name, message.skin);
       clients.set(socket, snake.id);
       clientMinimapModes.set(socket, message.minimapMode);
+      clientPerformanceProfiles.set(socket, message.performanceProfile);
       send(socket, {
         type: 'welcome',
         id: snake.id,
-        snapshot: world.snapshotFor(snake.id, message.minimapMode),
+        snapshot: world.snapshotFor(snake.id, message.minimapMode, undefined, message.performanceProfile),
       });
       return;
     }
@@ -118,6 +126,7 @@ wss.on('connection', (socket) => {
     }
     clients.delete(socket);
     clientMinimapModes.delete(socket);
+    clientPerformanceProfiles.delete(socket);
     spectatorCenters.delete(socket);
   });
 });
@@ -134,6 +143,7 @@ setInterval(() => {
   const dead = world.update();
 
   for (const [socket, id] of clients.entries()) {
+    const performanceProfile = clientPerformanceProfiles.get(socket) ?? 'desktop';
     const deadScore = id ? dead.get(id) : undefined;
     if (deadScore !== undefined) {
       send(socket, { type: 'dead', score: deadScore, reason: 'Colisao detectada' });
@@ -144,12 +154,21 @@ setInterval(() => {
       }
     }
 
+    if (
+      performanceProfile === 'mobile'
+      && deadScore === undefined
+      && world.tick % NETWORK.mobileSnapshotTickStep !== 0
+    ) {
+      continue;
+    }
+
     send(socket, {
       type: 'state',
       snapshot: world.snapshotFor(
         clients.get(socket) ?? null,
         clientMinimapModes.get(socket) ?? 'basic',
         spectatorCenters.get(socket),
+        performanceProfile,
       ),
     });
   }

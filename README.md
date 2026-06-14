@@ -183,6 +183,20 @@ O projeto contém:
 Para instalar o PWA e usar recursos como service worker e tela cheia com maior
 compatibilidade, abra o jogo por HTTPS.
 
+Em dispositivos com tela de toque, um perfil de desempenho é ativado
+automaticamente:
+
+- renderização limitada a 30 FPS;
+- resolução interna do canvas limitada a `1.25x`;
+- corpo das cobras desenhado com menos operações;
+- massas sem composição e brilho caros;
+- minimapa em resolução reduzida;
+- snapshots recebidos a 15 Hz;
+- área de interesse e quantidade de comidas visíveis reduzidas.
+
+A simulação do servidor continua em 30 ticks por segundo, portanto física,
+colisões e crescimento não ficam mais lentos.
+
 ## Deploy
 
 O arquivo `vercel.json` publica o frontend Vite na Vercel. Porém, o servidor do

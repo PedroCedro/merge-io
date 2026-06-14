@@ -91,6 +91,12 @@ export const NETWORK = {
   foodLimitPerClient: 520,
   foodLimitPerClientMax: 1800,
   foodLimitPerSegment: 3,
+  mobileAreaOfInterest: 1250,
+  mobileAreaOfInterestMax: 2100,
+  mobileFoodLimitPerClient: 220,
+  mobileFoodLimitPerClientMax: 650,
+  mobileFoodLimitPerSegment: 1,
+  mobileSnapshotTickStep: 2,
   leaderboardSize: 10,
   minimapSegmentStep: 5,
 };

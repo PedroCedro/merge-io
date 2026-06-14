@@ -1,5 +1,13 @@
 import './styles.css';
-import { SKINS, type ControlMode, type GameMode, type MinimapMode, type SkinId, type WorldSnapshot } from '../shared/types';
+import {
+  SKINS,
+  type ClientPerformanceProfile,
+  type ControlMode,
+  type GameMode,
+  type MinimapMode,
+  type SkinId,
+  type WorldSnapshot,
+} from '../shared/types';
 import { InputController } from './input';
 import { Minimap } from './minimap';
 import { MobileControls } from './mobileControls';
@@ -88,11 +96,17 @@ let previousSnapshot: WorldSnapshot | null = null;
 let snapshotReceivedAt = performance.now();
 let selfId: string | null = null;
 let playing = false;
+const performanceProfile: ClientPerformanceProfile = window.matchMedia('(pointer: coarse)').matches
+  ? 'mobile'
+  : 'desktop';
+const mobilePerformance = performanceProfile === 'mobile';
 
 const socket = new GameSocket();
 const input = new InputController(canvas);
 const renderer = new Renderer(canvas, context);
 const minimap = new Minimap(minimapCanvas);
+renderer.setMobilePerformance(mobilePerformance);
+minimap.setMobilePerformance(mobilePerformance);
 new MobileControls(
   {
     joystick: mobileJoystick,
@@ -251,6 +265,7 @@ const join = (resetMatch = false): void => {
     skin: selectedSkin,
     gameMode: selectedGameMode,
     minimapMode: visualSettings.minimap,
+    performanceProfile,
     resetMatch: selectedGameMode === 'ai' && resetMatch,
   });
   startMenu.classList.add('hidden');
@@ -492,9 +507,15 @@ window.addEventListener('resize', () => minimap.resize());
 window.visualViewport?.addEventListener('resize', () => renderer.resize());
 screen.orientation?.addEventListener('change', () => renderer.resize());
 
-const loop = (): void => {
+let lastRenderedAt = 0;
+const loop = (now = performance.now()): void => {
+  if (mobilePerformance && now - lastRenderedAt < 1000 / 30) {
+    requestAnimationFrame(loop);
+    return;
+  }
+  lastRenderedAt = now;
+
   fpsFrames += 1;
-  const now = performance.now();
   if (now - fpsLastUpdate >= 500) {
     const fps = Math.round((fpsFrames * 1000) / (now - fpsLastUpdate));
     fpsValue.textContent = `FPS ${fps}`;

@@ -29,6 +29,7 @@ export type SkinId =
 export type MinimapMode = 'full' | 'basic' | 'off';
 export type GameMode = 'multiplayer' | 'ai';
 export type BotDifficulty = 'dumb' | 'normal' | 'smart';
+export type ClientPerformanceProfile = 'desktop' | 'mobile';
 export type ControlMode = 'mouse' | 'keyboard';
 export type FoodSource = 'ambient' | 'boost' | 'death';
 
@@ -105,6 +106,7 @@ export type ClientMessage =
       skin: SkinId;
       gameMode: GameMode;
       minimapMode: MinimapMode;
+      performanceProfile: ClientPerformanceProfile;
       resetMatch?: boolean;
     }
   | {

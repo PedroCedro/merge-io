@@ -7,6 +7,7 @@ const UPDATE_INTERVAL_MS = 90;
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D;
   private lastDrawAt = 0;
+  private mobilePerformance = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d');
@@ -19,12 +20,17 @@ export class Minimap {
   }
 
   resize(): void {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.mobilePerformance ? 1 : window.devicePixelRatio || 1;
     this.canvas.width = Math.floor(MAP_SIZE * dpr);
     this.canvas.height = Math.floor(MAP_SIZE * dpr);
     this.canvas.style.width = `${MAP_SIZE}px`;
     this.canvas.style.height = `${MAP_SIZE}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  setMobilePerformance(enabled: boolean): void {
+    this.mobilePerformance = enabled;
+    this.resize();
   }
 
   draw(snapshot: WorldSnapshot, selfId: string | null, mode: MinimapMode, force = false): void {
