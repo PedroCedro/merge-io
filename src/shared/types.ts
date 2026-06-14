@@ -77,6 +77,11 @@ export type LeaderboardEntry = {
   skin: SkinId;
 };
 
+export type LeaderIndicator = {
+  id: EntityId;
+  position: Vector;
+};
+
 export type WorldSnapshot = {
   selfId: EntityId | null;
   tick: number;
@@ -88,6 +93,7 @@ export type WorldSnapshot = {
   radarSnakes: MinimapSnakeSnapshot[];
   foods: Food[];
   leaderboard: LeaderboardEntry[];
+  leader: LeaderIndicator | null;
 };
 
 export type ClientMessage =

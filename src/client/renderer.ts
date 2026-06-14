@@ -71,6 +71,7 @@ export class Renderer {
     }
     this.ctx.restore();
     this.drawNames(snapshot.snakes);
+    this.drawLeaderIndicator(snapshot);
   }
 
   private updateCamera(self?: SnakeSnapshot): void {
@@ -397,6 +398,98 @@ export class Renderer {
       this.ctx.fillText(snake.name, x, y);
     }
 
+    this.ctx.restore();
+  }
+
+  private drawLeaderIndicator(snapshot: WorldSnapshot): void {
+    const leader = snapshot.leader;
+    if (!leader) {
+      return;
+    }
+
+    const visibleLeader = snapshot.snakes.find((snake) => snake.id === leader.id);
+    const screenX = (leader.position.x - this.camera.x) * this.camera.zoom;
+    const screenY = (leader.position.y - this.camera.y) * this.camera.zoom;
+    const width = this.viewportWidth();
+    const height = this.viewportHeight();
+    const edgePadding = 44;
+    const isOnScreen = screenX >= edgePadding
+      && screenY >= edgePadding
+      && screenX <= width - edgePadding
+      && screenY <= height - edgePadding;
+
+    if (isOnScreen) {
+      const radius = (visibleLeader?.radius ?? 12) * this.camera.zoom;
+      this.drawCrown(screenX, screenY - radius - 24, 18);
+      return;
+    }
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const dx = screenX - centerX;
+    const dy = screenY - centerY;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 0.001) {
+      return;
+    }
+
+    const scale = Math.min(
+      (centerX - edgePadding) / Math.max(Math.abs(dx), 0.001),
+      (centerY - edgePadding) / Math.max(Math.abs(dy), 0.001),
+    );
+    const markerX = centerX + dx * scale;
+    const markerY = centerY + dy * scale;
+    const angle = Math.atan2(dy, dx);
+
+    this.ctx.save();
+    this.ctx.translate(markerX, markerY);
+    this.ctx.rotate(angle);
+    this.ctx.fillStyle = '#ffd84d';
+    this.ctx.shadowColor = 'rgba(255, 208, 45, 0.75)';
+    this.ctx.shadowBlur = 10;
+    this.ctx.beginPath();
+    this.ctx.moveTo(15, 0);
+    this.ctx.lineTo(2, -8);
+    this.ctx.lineTo(2, 8);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.restore();
+
+    this.drawCrown(
+      markerX - Math.cos(angle) * 13,
+      markerY - Math.sin(angle) * 13,
+      14,
+    );
+  }
+
+  private drawCrown(x: number, y: number, size: number): void {
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    this.ctx.fillStyle = '#ffd84d';
+    this.ctx.strokeStyle = '#8a5a00';
+    this.ctx.lineWidth = Math.max(1.2, size * 0.09);
+    this.ctx.shadowColor = 'rgba(255, 208, 45, 0.72)';
+    this.ctx.shadowBlur = size * 0.55;
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(-size, -size * 0.35);
+    this.ctx.lineTo(-size * 0.55, size * 0.15);
+    this.ctx.lineTo(-size * 0.2, -size * 0.65);
+    this.ctx.lineTo(size * 0.2, size * 0.15);
+    this.ctx.lineTo(size * 0.65, -size * 0.65);
+    this.ctx.lineTo(size, -size * 0.35);
+    this.ctx.lineTo(size * 0.78, size * 0.55);
+    this.ctx.lineTo(-size * 0.78, size * 0.55);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#fff3a8';
+    for (const jewelX of [-0.48, 0, 0.48]) {
+      this.ctx.beginPath();
+      this.ctx.arc(jewelX * size, size * 0.28, size * 0.1, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
     this.ctx.restore();
   }
 

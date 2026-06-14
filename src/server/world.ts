@@ -160,6 +160,7 @@ export class GameWorld {
       radarSnakes: this.radarSnakes(minimapMode, selfId),
       foods,
       leaderboard: this.leaderboard(),
+      leader: this.leaderIndicator(),
     };
   }
 
@@ -174,6 +175,22 @@ export class GameWorld {
         length: snake.length,
         skin: snake.skin,
       }));
+  }
+
+  private leaderIndicator(): WorldSnapshot['leader'] {
+    let leader: SnakeEntity | null = null;
+    for (const snake of this.snakes.values()) {
+      if (!leader || snake.score > leader.score || (snake.score === leader.score && snake.length > leader.length)) {
+        leader = snake;
+      }
+    }
+
+    return leader
+      ? {
+          id: leader.id,
+          position: { ...leader.head },
+        }
+      : null;
   }
 
   private resolveFood(snake: SnakeEntity): void {

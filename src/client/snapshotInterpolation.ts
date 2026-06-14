@@ -48,10 +48,16 @@ export const interpolateSnapshot = (
 
   const amount = clamp((now - receivedAt) / INTERPOLATION_WINDOW_MS, 0, 1);
   const previousSnakes = new Map(previous.snakes.map((snake) => [snake.id, snake]));
+  const previousLeader = previous.leader?.id === current.leader?.id ? previous.leader : null;
 
   return {
     ...current,
     snakes: current.snakes.map((snake) => interpolateSnake(previousSnakes.get(snake.id), snake, amount)),
+    leader: current.leader && previousLeader
+      ? {
+          ...current.leader,
+          position: lerpPoint(previousLeader.position, current.leader.position, amount),
+        }
+      : current.leader,
   };
 };
-
