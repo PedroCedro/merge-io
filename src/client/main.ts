@@ -239,7 +239,7 @@ const exitGame = async (): Promise<void> => {
   }, 150);
 };
 
-const join = (): void => {
+const join = (resetMatch = false): void => {
   if (!socket.connected) {
     return;
   }
@@ -251,6 +251,7 @@ const join = (): void => {
     skin: selectedSkin,
     gameMode: selectedGameMode,
     minimapMode: visualSettings.minimap,
+    resetMatch: selectedGameMode === 'ai' && resetMatch,
   });
   startMenu.classList.add('hidden');
   gameOverPanel.classList.add('hidden');
@@ -390,7 +391,7 @@ socket.onMessage((message) => {
   updateHud();
 });
 
-playButton.addEventListener('click', join);
+playButton.addEventListener('click', () => join(true));
 fullscreenButton.addEventListener('click', () => {
   void enterMobileFullscreen();
 });
@@ -401,7 +402,7 @@ confirmSkinButton.addEventListener('click', () => {
   closeSkinEditor();
 });
 cancelSkinButton.addEventListener('click', closeSkinEditor);
-playAgainButton.addEventListener('click', join);
+playAgainButton.addEventListener('click', () => join(true));
 backToMenuButton.addEventListener('click', () => {
   gameOverPanel.classList.add('hidden');
   leaderboard.classList.add('hidden');

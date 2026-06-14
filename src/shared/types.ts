@@ -28,6 +28,7 @@ export type SkinId =
   | 'mexico';
 export type MinimapMode = 'full' | 'basic' | 'off';
 export type GameMode = 'multiplayer' | 'ai';
+export type BotDifficulty = 'dumb' | 'normal' | 'smart';
 export type ControlMode = 'mouse' | 'keyboard';
 export type FoodSource = 'ambient' | 'boost' | 'death';
 
@@ -54,6 +55,7 @@ export type SnakeSnapshot = {
   name: string;
   skin: SkinId;
   bot: boolean;
+  botDifficulty: BotDifficulty | null;
   alive: boolean;
   score: number;
   radius: number;
@@ -103,6 +105,7 @@ export type ClientMessage =
       skin: SkinId;
       gameMode: GameMode;
       minimapMode: MinimapMode;
+      resetMatch?: boolean;
     }
   | {
       type: 'settings';

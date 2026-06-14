@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import type { Food, FoodSource, SkinId, SnakeSnapshot, Vector } from '../shared/types';
+import type { BotDifficulty, Food, FoodSource, SkinId, SnakeSnapshot, Vector } from '../shared/types';
 import { SNAKE, WORLD } from './config';
 import { clamp, lerpAngle, randomPoint } from './math';
 
@@ -13,6 +13,7 @@ export class SnakeEntity {
   readonly name: string;
   readonly skin: SkinId;
   readonly bot: boolean;
+  readonly botDifficulty: BotDifficulty | null;
   alive = true;
   score = 0;
   angle = Math.random() * Math.PI * 2;
@@ -26,10 +27,16 @@ export class SnakeEntity {
   private mass = SNAKE.initialLength * SNAKE.massPerSegment;
   private visualMass = this.mass;
 
-  constructor(name: string, skin: SkinId, spawn = randomPoint(WORLD.width, WORLD.height), bot = false) {
+  constructor(
+    name: string,
+    skin: SkinId,
+    spawn = randomPoint(WORLD.width, WORLD.height),
+    botDifficulty: BotDifficulty | null = null,
+  ) {
     this.name = name.trim().slice(0, 16) || 'Jogador';
     this.skin = skin;
-    this.bot = bot;
+    this.botDifficulty = botDifficulty;
+    this.bot = botDifficulty !== null;
     this.headPath = Array.from({ length: SNAKE.initialLength * 3 }, (_, index) => ({
       x: spawn.x - Math.cos(this.angle) * index * SNAKE.segmentGap,
       y: spawn.y - Math.sin(this.angle) * index * SNAKE.segmentGap,
@@ -108,6 +115,7 @@ export class SnakeEntity {
       name: this.name,
       skin: this.skin,
       bot: this.bot,
+      botDifficulty: this.botDifficulty,
       alive: this.alive,
       score: this.score,
       radius: this.radius,

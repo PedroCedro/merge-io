@@ -49,7 +49,16 @@ wss.on('connection', (socket) => {
       }
       spectatorCenters.delete(socket);
 
-      world.setAiMode(message.gameMode === 'ai');
+      if (message.gameMode === 'ai' && message.resetMatch && !world.hasHumanPlayers()) {
+        world.resetAiMatch();
+        for (const connectedSocket of clients.keys()) {
+          clients.set(connectedSocket, null);
+          spectatorCenters.delete(connectedSocket);
+        }
+      } else {
+        world.setAiMode(message.gameMode === 'ai');
+      }
+
       const snake = world.addSnake(message.name, message.skin);
       clients.set(socket, snake.id);
       clientMinimapModes.set(socket, message.minimapMode);

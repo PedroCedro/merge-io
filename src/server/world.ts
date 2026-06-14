@@ -1,4 +1,13 @@
-import { SKINS, type Food, type LeaderboardEntry, type MinimapMode, type SkinId, type Vector, type WorldSnapshot } from '../shared/types';
+import {
+  SKINS,
+  type BotDifficulty,
+  type Food,
+  type LeaderboardEntry,
+  type MinimapMode,
+  type SkinId,
+  type Vector,
+  type WorldSnapshot,
+} from '../shared/types';
 import { BOTS, NETWORK, SNAKE, TICK_RATE, WORLD } from './config';
 import { createFood, SnakeEntity } from './entities';
 import { distance, distancePointToSegment, distanceSquared, randomPoint } from './math';
@@ -12,6 +21,10 @@ export class GameWorld {
   private godSnakeIds = new Set<string>();
 
   constructor() {
+    this.seedAmbientFood();
+  }
+
+  private seedAmbientFood(): void {
     for (let i = 0; i < WORLD.initialFood; i += 1) {
       const food = createFood(undefined, undefined, 'ambient', this.tick);
       this.foods.set(food.id, food);
@@ -37,6 +50,21 @@ export class GameWorld {
 
   setPaused(paused: boolean): void {
     this.paused = paused;
+  }
+
+  hasHumanPlayers(): boolean {
+    return [...this.snakes.values()].some((snake) => !snake.bot);
+  }
+
+  resetAiMatch(): void {
+    this.snakes.clear();
+    this.foods.clear();
+    this.godSnakeIds.clear();
+    this.tick = 0;
+    this.paused = false;
+    this.aiMode = true;
+    this.seedAmbientFood();
+    this.ensureBots();
   }
 
   setGodMode(id: string, enabled: boolean): void {
@@ -311,13 +339,26 @@ export class GameWorld {
   }
 
   private ensureBots(): void {
-    const botCount = [...this.snakes.values()].filter((snake) => snake.bot).length;
+    const difficulties = Object.keys(BOTS.namesByDifficulty) as BotDifficulty[];
+    for (const difficulty of difficulties) {
+      const activeNames = new Set(
+        [...this.snakes.values()]
+          .filter((snake) => snake.botDifficulty === difficulty)
+          .map((snake) => snake.name),
+      );
+      const missingNames = BOTS.namesByDifficulty[difficulty]
+        .filter((name) => !activeNames.has(name));
 
-    for (let i = botCount; i < BOTS.targetCount; i += 1) {
-      const skin = SKINS[Math.floor(Math.random() * SKINS.length)].id;
-      const name = BOTS.names[Math.floor(Math.random() * BOTS.names.length)];
-      const bot = new SnakeEntity(`${name}-${Math.floor(Math.random() * 90 + 10)}`, skin, this.safeSpawn(), true);
-      this.snakes.set(bot.id, bot);
+      for (const name of missingNames) {
+        const skin = SKINS[Math.floor(Math.random() * SKINS.length)].id;
+        const bot = new SnakeEntity(
+          name,
+          skin,
+          this.safeSpawn(),
+          difficulty,
+        );
+        this.snakes.set(bot.id, bot);
+      }
     }
   }
 
@@ -327,40 +368,49 @@ export class GameWorld {
         continue;
       }
 
-      const dangerTarget = this.findDangerTarget(bot);
+      const difficulty = bot.botDifficulty ?? 'normal';
+      const behavior = BOTS.difficulty[difficulty];
+      if ((this.tick + this.botThinkOffset(bot.id)) % behavior.thinkIntervalTicks !== 0) {
+        continue;
+      }
+
+      const dangerTarget = this.findDangerTarget(bot, difficulty);
       if (dangerTarget) {
         bot.input = {
           target: {
             x: bot.head.x + (bot.head.x - dangerTarget.x) * 4,
             y: bot.head.y + (bot.head.y - dangerTarget.y) * 4,
           },
-          boosting: true,
+          boosting: behavior.escapeBoost,
         };
         continue;
       }
 
-      const foodTarget = this.findNearestFood(bot.head, BOTS.foodScanRadius);
+      const foodTarget = this.findBestFood(bot.head, difficulty);
       if (foodTarget) {
         bot.input = {
           target: foodTarget,
-          boosting: false,
+          boosting: difficulty === 'smart'
+            && foodTarget.source === 'death'
+            && distance(bot.head, foodTarget) > behavior.foodScanRadius * 0.45,
         };
         continue;
       }
 
       bot.input = {
-        target: this.roamTarget(bot),
+        target: this.roamTarget(bot, difficulty),
         boosting: false,
       };
     }
   }
 
-  private findDangerTarget(bot: SnakeEntity): Vector | null {
+  private findDangerTarget(bot: SnakeEntity, difficulty: BotDifficulty): Vector | null {
+    const behavior = BOTS.difficulty[difficulty];
     if (
-      bot.head.x < BOTS.wallMargin ||
-      bot.head.y < BOTS.wallMargin ||
-      bot.head.x > WORLD.width - BOTS.wallMargin ||
-      bot.head.y > WORLD.height - BOTS.wallMargin
+      bot.head.x < behavior.wallMargin ||
+      bot.head.y < behavior.wallMargin ||
+      bot.head.x > WORLD.width - behavior.wallMargin ||
+      bot.head.y > WORLD.height - behavior.wallMargin
     ) {
       return {
         x: bot.head.x < WORLD.width / 2 ? 0 : WORLD.width,
@@ -369,14 +419,14 @@ export class GameWorld {
     }
 
     let closest: Vector | null = null;
-    let closestDistance = BOTS.dangerRadius;
+    let closestDistance = behavior.dangerRadius;
 
     for (const other of this.snakes.values()) {
       if (other.id === bot.id || !other.alive) {
         continue;
       }
 
-      for (let i = 0; i < other.segments.length; i += 3) {
+      for (let i = 0; i < other.segments.length; i += behavior.dangerSegmentStep) {
         const segment = other.segments[i];
         const d = distance(bot.head, segment);
         if (d < closestDistance) {
@@ -389,32 +439,46 @@ export class GameWorld {
     return closest;
   }
 
-  private findNearestFood(origin: Vector, radius: number): Food | null {
-    let closest: Food | null = null;
-    let closestDistanceSq = radius * radius;
+  private findBestFood(origin: Vector, difficulty: BotDifficulty): Food | null {
+    const behavior = BOTS.difficulty[difficulty];
+    let best: Food | null = null;
+    let bestUtility = Number.NEGATIVE_INFINITY;
     let checked = 0;
 
     for (const food of this.foods.values()) {
       checked += 1;
-      if (checked % 3 !== this.tick % 3) {
+      if (checked % behavior.foodSampleStep !== this.tick % behavior.foodSampleStep) {
         continue;
       }
 
-      const d = distanceSquared(origin, food);
-      if (d < closestDistanceSq) {
-        closestDistanceSq = d;
-        closest = food;
+      const distanceSq = distanceSquared(origin, food);
+      if (distanceSq > behavior.foodScanRadius * behavior.foodScanRadius) {
+        continue;
+      }
+
+      const utility = -Math.sqrt(distanceSq) + food.value * behavior.foodValueWeight;
+      if (utility > bestUtility) {
+        bestUtility = utility;
+        best = food;
       }
     }
 
-    return closest;
+    return best;
   }
 
-  private roamTarget(bot: SnakeEntity): Vector {
-    const angle = bot.angle + (Math.random() - 0.5) * 0.55;
+  private roamTarget(bot: SnakeEntity, difficulty: BotDifficulty): Vector {
+    const angle = bot.angle + (Math.random() - 0.5) * BOTS.difficulty[difficulty].roamJitter;
     return {
       x: bot.head.x + Math.cos(angle) * BOTS.roamDistance,
       y: bot.head.y + Math.sin(angle) * BOTS.roamDistance,
     };
+  }
+
+  private botThinkOffset(id: string): number {
+    let hash = 0;
+    for (let index = 0; index < id.length; index += 1) {
+      hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+    }
+    return hash;
   }
 }

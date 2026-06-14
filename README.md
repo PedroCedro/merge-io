@@ -9,7 +9,7 @@ autoritativo que sincroniza as partidas por WebSocket.
 - Movimento contínuo com corpo reamostrado em uma trilha de posições.
 - Crescimento visual suave, sem aumentar o corpo inteiro no instante da coleta.
 - Comidas comuns e massas de cobras derrotadas com valores diferentes.
-- Bots para partidas individuais.
+- Bots em três níveis de habilidade para partidas individuais.
 - Ranking e minimapa em tempo real.
 - Colisão com paredes, corpo próprio e outras cobras.
 - Boost normal e boost infinito para testes.
@@ -203,6 +203,7 @@ Sem um servidor WebSocket acessível, a interface permanece em
 
 Os principais valores ficam em `src/server/config.ts`:
 
+- dimensões da área jogável;
 - tamanho e quantidade de comidas;
 - velocidade e aceleração;
 - crescimento do raio e do corpo;
@@ -213,6 +214,23 @@ Os principais valores ficam em `src/server/config.ts`:
 
 Alterações nesse arquivo afetam diretamente desempenho e jogabilidade. Faça
 ajustes pequenos e teste com cobras grandes antes de publicar.
+
+### Níveis dos bots
+
+O modo individual mantém dez bots com nomes e comportamentos fixos:
+
+| Nível | Bots | Comportamento |
+| --- | --- | --- |
+| `dumb` | `Dumb-Dot`, `Dumb-Zig`, `Dumb-Lost` | Visão curta, decisões lentas e movimento mais aleatório |
+| `normal` | `Normal-Byte`, `Normal-Nova`, `Normal-Dash`, `Normal-Echo` | Equilíbrio entre coleta, fuga e exploração |
+| `smart` | `Smart-Apex`, `Smart-Orbit`, `Smart-Viper` | Visão ampla, antecipação de perigo e prioridade para massas valiosas |
+
+Os nomes são restaurados no respawn, portanto não surgem bots duplicados durante
+a partida. Todos os bots nascem com o mesmo tamanho mínimo do jogador.
+
+Ao iniciar ou reiniciar uma partida individual sem outro jogador humano ativo,
+o servidor também recria comidas e bots. Assim, **Jogar novamente** começa uma
+simulação nova em vez de reutilizar o estado da partida anterior.
 
 ## Estado do projeto
 
