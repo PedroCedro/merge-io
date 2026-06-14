@@ -338,27 +338,54 @@ export class GameWorld {
     return randomPoint(WORLD.width, WORLD.height, 220);
   }
 
-  private ensureBots(): void {
-    const difficulties = Object.keys(BOTS.namesByDifficulty) as BotDifficulty[];
-    for (const difficulty of difficulties) {
-      const activeNames = new Set(
-        [...this.snakes.values()]
-          .filter((snake) => snake.botDifficulty === difficulty)
-          .map((snake) => snake.name),
-      );
-      const missingNames = BOTS.namesByDifficulty[difficulty]
-        .filter((name) => !activeNames.has(name));
+  private safeSpawnInQuadrant(quadrant: number): Vector {
+    const halfWidth = WORLD.width / 2;
+    const halfHeight = WORLD.height / 2;
+    const margin = 320;
+    const column = quadrant % 2;
+    const row = Math.floor(quadrant / 2);
+    const minX = column * halfWidth + margin;
+    const maxX = (column + 1) * halfWidth - margin;
+    const minY = row * halfHeight + margin;
+    const maxY = (row + 1) * halfHeight - margin;
 
-      for (const name of missingNames) {
-        const skin = SKINS[Math.floor(Math.random() * SKINS.length)].id;
-        const bot = new SnakeEntity(
-          name,
-          skin,
-          this.safeSpawn(),
-          difficulty,
-        );
-        this.snakes.set(bot.id, bot);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const point = {
+        x: minX + Math.random() * (maxX - minX),
+        y: minY + Math.random() * (maxY - minY),
+      };
+      const tooClose = [...this.snakes.values()].some((snake) => distance(point, snake.head) < 520);
+      if (!tooClose) {
+        return point;
       }
+    }
+
+    return {
+      x: minX + Math.random() * (maxX - minX),
+      y: minY + Math.random() * (maxY - minY),
+    };
+  }
+
+  private ensureBots(): void {
+    const activeNames = new Set(
+      [...this.snakes.values()]
+        .filter((snake) => snake.bot)
+        .map((snake) => snake.name),
+    );
+
+    for (const profile of BOTS.roster) {
+      if (activeNames.has(profile.name)) {
+        continue;
+      }
+
+      const skin = SKINS[Math.floor(Math.random() * SKINS.length)].id;
+      const bot = new SnakeEntity(
+        profile.name,
+        skin,
+        this.safeSpawnInQuadrant(profile.quadrant),
+        profile.difficulty,
+      );
+      this.snakes.set(bot.id, bot);
     }
   }
 

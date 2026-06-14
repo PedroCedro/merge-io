@@ -13,11 +13,20 @@ export const WORLD = {
 
 export const BOTS = {
   roamDistance: 800,
-  namesByDifficulty: {
-    dumb: ['Dumb-Dot', 'Dumb-Zig', 'Dumb-Lost'],
-    normal: ['Normal-Byte', 'Normal-Nova', 'Normal-Dash', 'Normal-Echo'],
-    smart: ['Smart-Apex', 'Smart-Orbit', 'Smart-Viper'],
-  },
+  roster: [
+    { name: 'Dumb-Dot', difficulty: 'dumb', quadrant: 0 },
+    { name: 'Normal-Byte', difficulty: 'normal', quadrant: 0 },
+    { name: 'Smart-Apex', difficulty: 'smart', quadrant: 0 },
+    { name: 'Dumb-Zig', difficulty: 'dumb', quadrant: 1 },
+    { name: 'Normal-Nova', difficulty: 'normal', quadrant: 1 },
+    { name: 'Smart-Orbit', difficulty: 'smart', quadrant: 1 },
+    { name: 'Dumb-Lost', difficulty: 'dumb', quadrant: 2 },
+    { name: 'Normal-Dash', difficulty: 'normal', quadrant: 2 },
+    { name: 'Smart-Viper', difficulty: 'smart', quadrant: 2 },
+    { name: 'Dumb-Drift', difficulty: 'dumb', quadrant: 3 },
+    { name: 'Normal-Echo', difficulty: 'normal', quadrant: 3 },
+    { name: 'Smart-Nexus', difficulty: 'smart', quadrant: 3 },
+  ] as const,
   difficulty: {
     dumb: {
       thinkIntervalTicks: 12,

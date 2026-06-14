@@ -217,16 +217,18 @@ ajustes pequenos e teste com cobras grandes antes de publicar.
 
 ### Níveis dos bots
 
-O modo individual mantém dez bots com nomes e comportamentos fixos:
+O modo individual mantém doze bots com nomes e comportamentos fixos. Cada um dos
+quatro quadrantes recebe um bot `dumb`, um `normal` e um `smart`:
 
 | Nível | Bots | Comportamento |
 | --- | --- | --- |
-| `dumb` | `Dumb-Dot`, `Dumb-Zig`, `Dumb-Lost` | Visão curta, decisões lentas e movimento mais aleatório |
+| `dumb` | `Dumb-Dot`, `Dumb-Zig`, `Dumb-Lost`, `Dumb-Drift` | Visão curta, decisões lentas e movimento mais aleatório |
 | `normal` | `Normal-Byte`, `Normal-Nova`, `Normal-Dash`, `Normal-Echo` | Equilíbrio entre coleta, fuga e exploração |
-| `smart` | `Smart-Apex`, `Smart-Orbit`, `Smart-Viper` | Visão ampla, antecipação de perigo e prioridade para massas valiosas |
+| `smart` | `Smart-Apex`, `Smart-Orbit`, `Smart-Viper`, `Smart-Nexus` | Visão ampla, antecipação de perigo e prioridade para massas valiosas |
 
 Os nomes são restaurados no respawn, portanto não surgem bots duplicados durante
-a partida. Todos os bots nascem com o mesmo tamanho mínimo do jogador.
+a partida. Cada bot reaparece dentro do seu quadrante original e nasce com o
+mesmo tamanho mínimo do jogador.
 
 Ao iniciar ou reiniciar uma partida individual sem outro jogador humano ativo,
 o servidor também recria comidas e bots. Assim, **Jogar novamente** começa uma
