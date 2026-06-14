@@ -83,6 +83,8 @@ let infiniteBoost = false;
 let autoCircle = false;
 let fpsFrames = 0;
 let fpsLastUpdate = performance.now();
+let lastMinimapDraw = 0;
+let lastInputSent = 0;
 let snapshot: WorldSnapshot | null = null;
 let previousSnapshot: WorldSnapshot | null = null;
 let snapshotReceivedAt = performance.now();
@@ -508,7 +510,10 @@ const loop = (): void => {
   const drawableSnapshot = interpolateSnapshot(snapshot, previousSnapshot, snapshotReceivedAt);
   if (drawableSnapshot) {
     renderer.draw(drawableSnapshot);
-    minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);
+    if (now - lastMinimapDraw >= 1000 / 15) {
+      minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);
+      lastMinimapDraw = now;
+    }
   } else {
     context.fillStyle = '#000';
     context.fillRect(
@@ -519,12 +524,13 @@ const loop = (): void => {
     );
   }
 
-  if (playing) {
+  if (playing && now - lastInputSent >= 1000 / 30) {
     socket.send({
       type: 'input',
       target: getControlTarget(),
       boosting: input.boosting,
     });
+    lastInputSent = now;
   }
 
   requestAnimationFrame(loop);

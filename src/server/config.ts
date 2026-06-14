@@ -9,6 +9,7 @@ export const WORLD = {
   maxFood: 15000,
   replenishFood: false,
   deathFoodValue: 5,
+  maxFoodRadius: 12,
 };
 
 export const BOTS = {

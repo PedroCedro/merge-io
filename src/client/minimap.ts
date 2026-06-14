@@ -19,7 +19,10 @@ export class Minimap {
   }
 
   resize(): void {
-    const dpr = window.devicePixelRatio || 1;
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const dpr = navigator.maxTouchPoints > 0
+      ? Math.min(devicePixelRatio, 1.5)
+      : devicePixelRatio;
     this.canvas.width = Math.floor(MAP_SIZE * dpr);
     this.canvas.height = Math.floor(MAP_SIZE * dpr);
     this.canvas.style.width = `${MAP_SIZE}px`;

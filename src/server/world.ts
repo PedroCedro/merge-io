@@ -10,6 +10,7 @@ import {
 } from '../shared/types';
 import { BOTS, NETWORK, SNAKE, TICK_RATE, WORLD } from './config';
 import { createFood, SnakeEntity } from './entities';
+import { FoodSpatialIndex } from './foodSpatialIndex';
 import { distance, distancePointToSegment, distanceSquared, randomPoint } from './math';
 
 export class GameWorld {
@@ -19,6 +20,7 @@ export class GameWorld {
   paused = false;
   private aiMode = false;
   private godSnakeIds = new Set<string>();
+  private readonly foodIndex = new FoodSpatialIndex(256);
 
   constructor() {
     this.seedAmbientFood();
@@ -27,7 +29,7 @@ export class GameWorld {
   private seedAmbientFood(): void {
     for (let i = 0; i < WORLD.initialFood; i += 1) {
       const food = createFood(undefined, undefined, 'ambient', this.tick);
-      this.foods.set(food.id, food);
+      this.addFood(food);
     }
   }
 
@@ -59,6 +61,7 @@ export class GameWorld {
   resetAiMatch(): void {
     this.snakes.clear();
     this.foods.clear();
+    this.foodIndex.clear();
     this.godSnakeIds.clear();
     this.tick = 0;
     this.paused = false;
@@ -84,9 +87,9 @@ export class GameWorld {
   }
 
   clearDeathMass(): void {
-    for (const [id, food] of this.foods) {
+    for (const food of this.foods.values()) {
       if (food.source === 'death') {
-        this.foods.delete(id);
+        this.removeFood(food);
       }
     }
   }
@@ -142,7 +145,7 @@ export class GameWorld {
     if (WORLD.replenishFood) {
       while (this.foods.size < WORLD.maxFood) {
         const food = createFood(undefined, undefined, 'ambient', this.tick);
-        this.foods.set(food.id, food);
+        this.addFood(food);
       }
     }
 
@@ -172,8 +175,8 @@ export class GameWorld {
       .filter((snake) => snake.id === selfId || distanceSquared(center, snake.head) <= areaSq)
       .map((snake) => snake.snapshot());
 
-    const foods = [...this.foods.values()]
-      .filter((food) => distanceSquared(center, food) <= areaSq)
+    const foods = this.foodIndex
+      .queryCircle(center, areaOfInterest)
       .sort((a, b) => distanceSquared(center, a) - distanceSquared(center, b))
       .slice(0, foodLimit);
 
@@ -226,7 +229,8 @@ export class GameWorld {
     let deathFoodPickedUp = 0;
     let consumedMass = 0;
 
-    for (const food of this.foods.values()) {
+    const pickupSearchRadius = snake.radius + SNAKE.foodPickupRadius + WORLD.maxFoodRadius;
+    for (const food of this.foodIndex.queryCircle(snake.head, pickupSearchRadius)) {
       const pickupDistance = snake.radius + food.radius + SNAKE.foodPickupRadius * 0.45;
       if (distanceSquared(snake.head, food) > pickupDistance * pickupDistance) {
         continue;
@@ -244,7 +248,7 @@ export class GameWorld {
       }
 
       consumedMass += food.value;
-      this.foods.delete(food.id);
+      this.removeFood(food);
     }
 
     if (consumedMass > 0) {
@@ -300,14 +304,14 @@ export class GameWorld {
       };
       const remainingMass = droppedMass - particleIndex * WORLD.deathFoodValue;
       const food = createFood(position, Math.min(WORLD.deathFoodValue, remainingMass), 'death', this.tick);
-      this.foods.set(food.id, food);
+      this.addFood(food);
     }
   }
 
   private dropBoostFood(snake: SnakeEntity): void {
     for (const position of snake.boostFoodDrops) {
       const food = createFood(position, 1, 'boost', this.tick);
-      this.foods.set(food.id, food);
+      this.addFood(food);
     }
   }
 
@@ -472,17 +476,13 @@ export class GameWorld {
     let bestUtility = Number.NEGATIVE_INFINITY;
     let checked = 0;
 
-    for (const food of this.foods.values()) {
+    for (const food of this.foodIndex.queryCircle(origin, behavior.foodScanRadius)) {
       checked += 1;
       if (checked % behavior.foodSampleStep !== this.tick % behavior.foodSampleStep) {
         continue;
       }
 
       const distanceSq = distanceSquared(origin, food);
-      if (distanceSq > behavior.foodScanRadius * behavior.foodScanRadius) {
-        continue;
-      }
-
       const utility = -Math.sqrt(distanceSq) + food.value * behavior.foodValueWeight;
       if (utility > bestUtility) {
         bestUtility = utility;
@@ -507,5 +507,15 @@ export class GameWorld {
       hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
     }
     return hash;
+  }
+
+  private addFood(food: Food): void {
+    this.foods.set(food.id, food);
+    this.foodIndex.add(food);
+  }
+
+  private removeFood(food: Food): void {
+    this.foods.delete(food.id);
+    this.foodIndex.remove(food);
   }
 }
