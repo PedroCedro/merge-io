@@ -1,4 +1,4 @@
-const CACHE_NAME = 'merge-io-shell-v1';
+const CACHE_NAME = 'merge-io-shell-v2';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',

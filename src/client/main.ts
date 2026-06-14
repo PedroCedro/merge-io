@@ -83,8 +83,6 @@ let infiniteBoost = false;
 let autoCircle = false;
 let fpsFrames = 0;
 let fpsLastUpdate = performance.now();
-let lastMinimapDraw = 0;
-let lastInputSent = 0;
 let snapshot: WorldSnapshot | null = null;
 let previousSnapshot: WorldSnapshot | null = null;
 let snapshotReceivedAt = performance.now();
@@ -510,10 +508,7 @@ const loop = (): void => {
   const drawableSnapshot = interpolateSnapshot(snapshot, previousSnapshot, snapshotReceivedAt);
   if (drawableSnapshot) {
     renderer.draw(drawableSnapshot);
-    if (now - lastMinimapDraw >= 1000 / 15) {
-      minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);
-      lastMinimapDraw = now;
-    }
+    minimap.draw(drawableSnapshot, selfId, visualSettings.minimap);
   } else {
     context.fillStyle = '#000';
     context.fillRect(
@@ -524,13 +519,12 @@ const loop = (): void => {
     );
   }
 
-  if (playing && now - lastInputSent >= 1000 / 30) {
+  if (playing) {
     socket.send({
       type: 'input',
       target: getControlTarget(),
       boosting: input.boosting,
     });
-    lastInputSent = now;
   }
 
   requestAnimationFrame(loop);
@@ -546,8 +540,11 @@ loop();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // A rede local via HTTP permite jogar, mas alguns navegadores exigem HTTPS para instalar o PWA.
-    });
+    navigator.serviceWorker
+      .register('/sw.js', { updateViaCache: 'none' })
+      .then((registration) => registration.update())
+      .catch(() => {
+        // A rede local via HTTP permite jogar, mas alguns navegadores exigem HTTPS para instalar o PWA.
+      });
   });
 }

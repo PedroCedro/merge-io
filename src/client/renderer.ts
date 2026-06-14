@@ -23,10 +23,7 @@ export class Renderer {
   resize(): void {
     const width = this.viewportWidth();
     const height = this.viewportHeight();
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const dpr = navigator.maxTouchPoints > 0
-      ? Math.min(devicePixelRatio, 1.5)
-      : devicePixelRatio;
+    const dpr = window.devicePixelRatio || 1;
     this.canvas.width = Math.floor(width * dpr);
     this.canvas.height = Math.floor(height * dpr);
     this.canvas.style.width = `${width}px`;
